@@ -1,0 +1,11 @@
+# Webserver config
+webserver:
+  port: 7011
+
+# View distance for every map display
+view_distance: 100
+
+# Database config
+database:
+  type: sqlite
+  file: "boiler.db"
