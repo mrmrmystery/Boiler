@@ -113,8 +113,8 @@ public class BoilerCommand extends CommandAPICommand {
                         })
                 )
         );
-        withSubcommand(new CommandAPICommand("indentify")
-                .withPermission("mapdisplay.indentify")
+        withSubcommand(new CommandAPICommand("identify")
+                .withPermission("boiler.identify")
                 .executesPlayer((player, args) -> {
                     MapTraceResult result = LoadedMapDisplay.MAP_ENGINE.traceDisplayInView(player, 10);
                     if(result == null) {
