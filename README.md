@@ -1,6 +1,9 @@
 # Boiler
 Extension Plugin for MapEngine that allows you to show different types of content on a map display
 
+Download:
+https://modrinth.com/plugin/boiler
+
 ## Dependencies
 These Plugins are required to use Boiler
 - https://modrinth.com/plugin/mapengine
@@ -34,6 +37,11 @@ An animated gif. Example:
 ##### whiteboard
 A board on which you can draw by clicking it
 `/boiler setsource whiteboard 1`
+
+##### file
+Play local mp4 files
+`/boiler setsource file 1 video.mp4`
+**Note:** Videos can be placed in the media folder inside the plugins data folder
 
 ##### web
 Stream to a screen using the integrated website
