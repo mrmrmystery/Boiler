@@ -36,22 +36,25 @@ public class LoadedMapDisplay {
     public List<Player> VISIBLE_FOR = new ArrayList<>();
     private int[] lastFrame;
     private int viewDistance = 100;
+    private JsonObject settings;
 
     public LoadedMapDisplay(SMapDisplay sMapDisplay) {
         this.locationA = sMapDisplay.getLocationA();
         this.locationB = sMapDisplay.getLocationB();
         this.facing = sMapDisplay.getFacing();
         this.id = sMapDisplay.getId();
+        settings = JsonParser.parseString(sMapDisplay.getDisplaySettings()).getAsJsonObject();
         viewDistance = Boiler.getPlugin().getConfig().getInt("view_distance", 100);
 
         BlockVector pointA = locationA.toVector().toBlockVector();
         BlockVector pointB = locationB.toVector().toBlockVector();
         mapDisplay = MAP_ENGINE.displayProvider().createBasic(pointA, pointB, facing);
         drawingSpace = MAP_ENGINE.pipeline().drawingSpace(mapDisplay);
-        drawingSpace.ctx().converter(Converter.DIRECT);
-        drawingSpace.ctx().buffering(true);
 
         setSource(sMapDisplay.getSourceType(), sMapDisplay.getSavedData());
+
+
+        setSettings(settings);
 
         new Thread(() -> {
             new Timer().schedule(new TimerTask() {
@@ -61,6 +64,20 @@ public class LoadedMapDisplay {
                 }
             }, 0, 1000 / 20);
         }).start();
+    }
+
+    public void setSettings(JsonObject settings) {
+        if(settings.get("caching") != null && settings.get("caching").getAsBoolean()) {
+            drawingSpace.ctx().buffering(true);
+        } else {
+            drawingSpace.ctx().buffering(false);
+        }
+
+        if(settings.get("dithering") != null && settings.get("dithering").getAsBoolean()) {
+            drawingSpace.ctx().converter(Converter.FLOYD_STEINBERG);
+        } else {
+            drawingSpace.ctx().converter(Converter.DIRECT);
+        }
     }
 
 
@@ -154,6 +171,9 @@ public class LoadedMapDisplay {
                 case "FILE" -> {
                     selectedSource = new LocalFileSource();
                 }
+                case "SETTINGS" -> {
+                    selectedSource = new SettingSource();
+                }
                 case "NONE" -> {
                     selectedSource = null;
                 }
@@ -175,5 +195,9 @@ public class LoadedMapDisplay {
 
     public IMapDisplay getMapDisplay() {
         return mapDisplay;
+    }
+
+    public JsonObject getSettings() {
+        return settings;
     }
 }

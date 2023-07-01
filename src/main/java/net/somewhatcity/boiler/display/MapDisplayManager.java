@@ -1,5 +1,6 @@
 package net.somewhatcity.boiler.display;
 
+import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.clientside.IMapDisplay;
 import net.somewhatcity.boiler.db.DB;
 import net.somewhatcity.boiler.db.SMapDisplay;
@@ -57,6 +58,7 @@ public class MapDisplayManager {
             sMapDisplay.setFacing(face);
             sMapDisplay.setSourceType(sourceType);
             sMapDisplay.setSavedData(savedData);
+            sMapDisplay.setDisplaySettings("{\"caching\": true,\"dithering\": false}");
             session.persist(sMapDisplay);
             loadedMapDisplaysToAdd.add(new LoadedMapDisplay(sMapDisplay));
             session.getTransaction().commit();
@@ -87,6 +89,20 @@ public class MapDisplayManager {
             LoadedMapDisplay loadedMapDisplay = loadedMapDisplays.stream().filter(display -> display.getId() == id).findFirst().orElse(null);
             if(loadedMapDisplay != null){
                 loadedMapDisplay.setSource(sourceType, savedData);
+            }
+            session.getTransaction().commit();
+        }
+    }
+
+    public static void setSettings(int id, JsonObject object) {
+        try(Session session = DB.openSession()) {
+            session.beginTransaction();
+            SMapDisplay sMapDisplay = session.get(SMapDisplay.class, id);
+            sMapDisplay.setDisplaySettings(object.toString());
+            session.update(sMapDisplay);
+            LoadedMapDisplay loadedMapDisplay = loadedMapDisplays.stream().filter(display -> display.getId() == id).findFirst().orElse(null);
+            if(loadedMapDisplay != null){
+                loadedMapDisplay.setSettings(object);
             }
             session.getTransaction().commit();
         }

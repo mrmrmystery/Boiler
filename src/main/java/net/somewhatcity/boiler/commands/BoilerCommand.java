@@ -123,6 +123,18 @@ public class BoilerCommand extends CommandAPICommand {
                             MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "FILE");
                         })
                 )
+                .withSubcommand(new CommandAPICommand("settings")
+                        .withArguments(new IntegerArgument("id"))
+                        .executesPlayer((player, args) -> {
+                            JsonObject json = new JsonObject();
+                            String savedData = json.toString();
+
+                            new Thread(() -> {
+                                MapDisplayManager.setSource((int) args.get(0), "SETTINGS", savedData);
+                            }).start();
+                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "FILE");
+                        })
+                )
         );
         withSubcommand(new CommandAPICommand("identify")
                 .withPermission("boiler.identify")

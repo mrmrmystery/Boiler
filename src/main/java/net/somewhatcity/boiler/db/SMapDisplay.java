@@ -28,6 +28,8 @@ public class SMapDisplay {
 
     private String savedData;
 
+    private String displaySettings;
+
 
     public SMapDisplay() {
     }
@@ -43,6 +45,7 @@ public class SMapDisplay {
         this.facing = face;
         this.sourceType = sourceType;
         this.savedData = savedData;
+        this.displaySettings = "{\"caching\": true,\"dithering\": false}";
     }
 
     public int getId() {
@@ -92,5 +95,14 @@ public class SMapDisplay {
 
     public void setFacing(BlockFace facing) {
         this.facing = facing;
+    }
+
+    public String getDisplaySettings() {
+        if(displaySettings == null || displaySettings.equals("")) displaySettings = "{}";
+        return displaySettings;
+    }
+
+    public void setDisplaySettings(String displaySettings) {
+        this.displaySettings = displaySettings;
     }
 }

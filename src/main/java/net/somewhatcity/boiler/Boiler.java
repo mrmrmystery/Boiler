@@ -5,6 +5,7 @@ import dev.jorel.commandapi.CommandAPIBukkitConfig;
 import net.somewhatcity.boiler.commands.BoilerCommand;
 import net.somewhatcity.boiler.db.DB;
 import net.somewhatcity.boiler.display.MapDisplayManager;
+import net.somewhatcity.boiler.util.Assets;
 import net.somewhatcity.boiler.util.Metrics;
 import net.somewhatcity.boiler.util.Webserver;
 import org.bukkit.Bukkit;
@@ -25,6 +26,8 @@ public class Boiler extends JavaPlugin {
         getLogger().info("Boiler is warming up!");
         new Metrics(this, 18926);
         saveDefaultConfig();
+
+        Assets.load();
 
         File mediaFolder = new File(getDataFolder(), "media");
         if (!mediaFolder.exists()) mediaFolder.mkdirs();
