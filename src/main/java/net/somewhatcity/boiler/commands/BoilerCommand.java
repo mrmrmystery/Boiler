@@ -30,7 +30,7 @@ public class BoilerCommand extends CommandAPICommand {
                     Location lookloc2 = (Location) args.get(1);
                     Location loc2 = lookloc2.getBlock().getRelative(facing).getLocation();
 
-                    MapDisplayManager.createNew(loc1, loc2, facing, Source.Type.NONE, "{}");
+                    MapDisplayManager.createNew(loc1, loc2, facing, "NONE", "{}");
                 })
         );
         withSubcommand(new CommandAPICommand("delete")
@@ -54,14 +54,13 @@ public class BoilerCommand extends CommandAPICommand {
                         .withArguments(new IntegerArgument("id"))
                         .withArguments(new GreedyStringArgument("url"))
                         .executesPlayer((player, args) -> {
-                            Source.Type type = Source.Type.IMAGE;
 
                             JsonObject json = new JsonObject();
                             json.addProperty("url", (String) args.get(1));
                             String savedData = json.toString();
 
                             new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), type, savedData);
+                                MapDisplayManager.setSource((int) args.get(0), "IMAGE", savedData);
                             }).start();
                             MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "IMAGE");
                         })
@@ -70,14 +69,13 @@ public class BoilerCommand extends CommandAPICommand {
                         .withArguments(new IntegerArgument("id"))
                         .withArguments(new GreedyStringArgument("url"))
                         .executesPlayer((player, args) -> {
-                            Source.Type type = Source.Type.GIF;
 
                             JsonObject json = new JsonObject();
                             json.addProperty("url", (String) args.get(1));
                             String savedData = json.toString();
 
                             new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), type, savedData);
+                                MapDisplayManager.setSource((int) args.get(0), "GIF", savedData);
                             }).start();
 
 
@@ -87,13 +85,12 @@ public class BoilerCommand extends CommandAPICommand {
                 .withSubcommand(new CommandAPICommand("whiteboard")
                         .withArguments(new IntegerArgument("id"))
                         .executesPlayer((player, args) -> {
-                            Source.Type type = Source.Type.WHITEBOARD;
 
                             JsonObject json = new JsonObject();
                             String savedData = json.toString();
 
                             new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), type, savedData);
+                                MapDisplayManager.setSource((int) args.get(0), "WHITEBOARD", savedData);
                             }).start();
                             MessageUtil.sendGreen(player, "MapDisplay %s his now using %s as source.", args.get(0), "WHITEBOARD");
                         })
@@ -101,15 +98,29 @@ public class BoilerCommand extends CommandAPICommand {
                 .withSubcommand(new CommandAPICommand("web")
                         .withArguments(new IntegerArgument("id"))
                         .executesPlayer((player, args) -> {
-                            Source.Type type = Source.Type.WEB;
 
                             JsonObject json = new JsonObject();
                             String savedData = json.toString();
 
                             new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), type, savedData);
+                                MapDisplayManager.setSource((int) args.get(0), "WEB", savedData);
                             }).start();
                             MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "WEB");
+                        })
+                )
+                .withSubcommand(new CommandAPICommand("file")
+                        .withArguments(new IntegerArgument("id"))
+                        .withArguments(new GreedyStringArgument("file"))
+                        .executesPlayer((player, args) -> {
+
+                            JsonObject json = new JsonObject();
+                            json.addProperty("file", args.get(1).toString());
+                            String savedData = json.toString();
+
+                            new Thread(() -> {
+                                MapDisplayManager.setSource((int) args.get(0), "FILE", savedData);
+                            }).start();
+                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "FILE");
                         })
                 )
         );

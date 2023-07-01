@@ -12,7 +12,12 @@ public abstract class Source {
     public abstract void unload();
     public abstract BufferedImage getFrame();
 
-    public enum Type {
-        NONE, IMAGE, GIF, BROWSER, FFMPEG, WHITEBOARD, CLIENT, WEB
-    }
+    public static String types[] = {
+            "NONE",
+            "IMAGE",
+            "GIF",
+            "WHITEBOARD",
+            "WEB",
+            "FILE"
+    };
 }

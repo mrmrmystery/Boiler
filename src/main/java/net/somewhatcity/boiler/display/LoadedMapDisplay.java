@@ -51,7 +51,7 @@ public class LoadedMapDisplay {
         drawingSpace.ctx().converter(Converter.DIRECT);
         drawingSpace.ctx().buffering(true);
 
-        setSource(sMapDisplay.getType(), sMapDisplay.getSavedData());
+        setSource(sMapDisplay.getSourceType(), sMapDisplay.getSavedData());
 
         new Thread(() -> {
             new Timer().schedule(new TimerTask() {
@@ -133,25 +133,28 @@ public class LoadedMapDisplay {
         VISIBLE_FOR.forEach(player -> mapDisplay.despawn(player));
     }
 
-    public void setSource(Source.Type type, String savedData) {
+    public void setSource(String sourceType, String savedData) {
         try {
             if(selectedSource != null) selectedSource.unload();
 
             JsonObject data = JsonParser.parseString(savedData).getAsJsonObject();
-            switch (type) {
-                case IMAGE -> {
+            switch (sourceType) {
+                case "IMAGE" -> {
                     selectedSource = new ImageSource();
                 }
-                case GIF -> {
+                case "GIF" -> {
                     selectedSource = new GIFSource();
                 }
-                case WHITEBOARD -> {
+                case "WHITEBOARD" -> {
                     selectedSource = new WhiteboardSource();
                 }
-                case WEB -> {
+                case "WEB" -> {
                     selectedSource = new WebSource();
                 }
-                case NONE -> {
+                case "FILE" -> {
+                    selectedSource = new LocalFileSource();
+                }
+                case "NONE" -> {
                     selectedSource = null;
                 }
             }

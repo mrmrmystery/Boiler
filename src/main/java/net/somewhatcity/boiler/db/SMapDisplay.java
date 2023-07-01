@@ -1,9 +1,6 @@
 package net.somewhatcity.boiler.db;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import net.somewhatcity.boiler.display.sources.Source;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -27,14 +24,15 @@ public class SMapDisplay {
 
     private BlockFace facing;
 
-    private Source.Type type;
+    private String sourceType;
+
     private String savedData;
 
 
     public SMapDisplay() {
     }
 
-    public SMapDisplay(Location locA, Location locB, BlockFace face, int width, int height, Source.Type type, String savedData) {
+    public SMapDisplay(Location locA, Location locB, BlockFace face, int width, int height, String sourceType, String savedData) {
         this.xA = locA.getBlockX();
         this.yA = locA.getBlockY();
         this.zA = locA.getBlockZ();
@@ -43,7 +41,7 @@ public class SMapDisplay {
         this.zB = locB.getBlockZ();
         this.world = locA.getWorld().getName();
         this.facing = face;
-        this.type = type;
+        this.sourceType = sourceType;
         this.savedData = savedData;
     }
 
@@ -55,8 +53,8 @@ public class SMapDisplay {
         return facing;
     }
 
-    public Source.Type getType() {
-        return type;
+    public String getSourceType() {
+        return sourceType;
     }
 
     public String getSavedData() {
@@ -75,8 +73,8 @@ public class SMapDisplay {
         this.savedData = savedData;
     }
 
-    public void setType(Source.Type type) {
-        this.type = type;
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
     }
 
     public void setLocationA(Location locationA) {

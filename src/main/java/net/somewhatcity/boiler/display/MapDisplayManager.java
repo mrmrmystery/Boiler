@@ -48,14 +48,14 @@ public class MapDisplayManager {
         }, 0, 50);
     }
 
-    public static void createNew(Location locationA, Location locationB, BlockFace face, Source.Type type, String savedData) {
+    public static void createNew(Location locationA, Location locationB, BlockFace face, String sourceType, String savedData) {
         try(Session session = DB.openSession()) {
             session.beginTransaction();
             SMapDisplay sMapDisplay = new SMapDisplay();
             sMapDisplay.setLocationA(locationA);
             sMapDisplay.setLocationB(locationB);
             sMapDisplay.setFacing(face);
-            sMapDisplay.setType(type);
+            sMapDisplay.setSourceType(sourceType);
             sMapDisplay.setSavedData(savedData);
             session.persist(sMapDisplay);
             loadedMapDisplaysToAdd.add(new LoadedMapDisplay(sMapDisplay));
@@ -77,16 +77,16 @@ public class MapDisplayManager {
         }
     }
 
-    public static void setSource(int id, Source.Type type, String savedData) {
+    public static void setSource(int id, String sourceType, String savedData) {
         try(Session session = DB.openSession()) {
             session.beginTransaction();
             SMapDisplay sMapDisplay = session.get(SMapDisplay.class, id);
-            sMapDisplay.setType(type);
+            sMapDisplay.setSourceType(sourceType);
             sMapDisplay.setSavedData(savedData);
             session.update(sMapDisplay);
             LoadedMapDisplay loadedMapDisplay = loadedMapDisplays.stream().filter(display -> display.getId() == id).findFirst().orElse(null);
             if(loadedMapDisplay != null){
-                loadedMapDisplay.setSource(type, savedData);
+                loadedMapDisplay.setSource(sourceType, savedData);
             }
             session.getTransaction().commit();
         }

@@ -11,6 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,6 +25,10 @@ public class Boiler extends JavaPlugin {
         getLogger().info("Boiler is warming up!");
         new Metrics(this, 18926);
         saveDefaultConfig();
+
+        File mediaFolder = new File(getDataFolder(), "media");
+        if (!mediaFolder.exists()) mediaFolder.mkdirs();
+
         Logger.getLogger("org.hibernate").setLevel(Level.OFF);
         DB.init();
         CommandAPI.onLoad(new CommandAPIBukkitConfig(this).verboseOutput(false));
