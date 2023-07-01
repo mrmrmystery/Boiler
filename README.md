@@ -1,6 +1,9 @@
 # Boiler
 Extension Plugin for MapEngine that allows you to show different types of content on a map display
 
+Download:
+https://modrinth.com/plugin/boiler
+
 ## Dependencies
 These Plugins are required to use Boiler
 - https://modrinth.com/plugin/mapengine
