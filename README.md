@@ -35,6 +35,11 @@ An animated gif. Example:
 A board on which you can draw by clicking it
 `/boiler setsource whiteboard 1`
 
+##### file
+Play local mp4 files
+`/boiler setsource file 1 video.mp4`
+**Note:** Videos can be placed in the media folder inside the plugins data folder
+
 ##### web
 Stream to a screen using the integrated website
 `/boiler setsource web 1`
