@@ -98,7 +98,7 @@ public class SMapDisplay {
     }
 
     public String getDisplaySettings() {
-        if(displaySettings == null || displaySettings.equals("")) displaySettings = "{}";
+        if(displaySettings == null || displaySettings.equals("")) displaySettings = "{\"caching\": true,\"dithering\": false}";
         return displaySettings;
     }
 

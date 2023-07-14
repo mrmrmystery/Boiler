@@ -5,6 +5,9 @@ webserver:
 # View distance for every map display
 view_distance: 100
 
+# ping limit
+ping_limit: 100
+
 # Database config
 database:
   type: sqlite

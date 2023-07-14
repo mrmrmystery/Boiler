@@ -6,9 +6,11 @@ import net.somewhatcity.boiler.commands.BoilerCommand;
 import net.somewhatcity.boiler.db.DB;
 import net.somewhatcity.boiler.display.MapDisplayManager;
 import net.somewhatcity.boiler.util.Assets;
+import net.somewhatcity.boiler.util.BoilerConfig;
 import net.somewhatcity.boiler.util.Metrics;
 import net.somewhatcity.boiler.util.Webserver;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -27,6 +29,8 @@ public class Boiler extends JavaPlugin {
         new Metrics(this, 18926);
         saveDefaultConfig();
 
+        new BoilerConfig(this);
+
         Assets.load();
 
         File mediaFolder = new File(getDataFolder(), "media");
@@ -41,11 +45,13 @@ public class Boiler extends JavaPlugin {
         MapDisplayManager.loadAll();
 
         Webserver.start();
+
+
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+
     }
 
     public static Boiler getPlugin() {

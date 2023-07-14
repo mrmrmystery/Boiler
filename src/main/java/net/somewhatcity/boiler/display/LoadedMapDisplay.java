@@ -35,6 +35,7 @@ public class LoadedMapDisplay {
     private IDrawingSpace drawingSpace;
     public List<Player> VISIBLE_FOR = new ArrayList<>();
     private int[] lastFrame;
+    private int ping_limit = 100;
     private int viewDistance = 100;
     private JsonObject settings;
 
@@ -45,6 +46,7 @@ public class LoadedMapDisplay {
         this.id = sMapDisplay.getId();
         settings = JsonParser.parseString(sMapDisplay.getDisplaySettings()).getAsJsonObject();
         viewDistance = Boiler.getPlugin().getConfig().getInt("view_distance", 100);
+        ping_limit = Boiler.getPlugin().getConfig().getInt("ping_limit", 100);
 
         BlockVector pointA = locationA.toVector().toBlockVector();
         BlockVector pointB = locationB.toVector().toBlockVector();
@@ -87,7 +89,7 @@ public class LoadedMapDisplay {
 
     public void tick() {
         Bukkit.getOnlinePlayers().forEach(player -> {
-            if(locationA.distance(player.getLocation()) < 100) {
+            if(locationA.distance(player.getLocation()) < viewDistance) {
                 if(!VISIBLE_FOR.contains(player)) {
                     VISIBLE_FOR.add(player);
                     mapDisplay.spawn(player);
@@ -107,7 +109,7 @@ public class LoadedMapDisplay {
 
         drawingSpace.ctx().receivers().clear();
         for(Player player : VISIBLE_FOR) {
-            if(player.getPing() < 100) drawingSpace.ctx().receivers().add(player);
+            if(player.getPing() < ping_limit) drawingSpace.ctx().receivers().add(player);
         }
         int[] rgb;
 
