@@ -1,9 +1,7 @@
 name: Boiler
 author: Mr_Mr_Mystery
-version: '1.0.0'
+version: '1.2.0'
 main: net.somewhatcity.boiler.Boiler
 api-version: '1.20'
-
-depend:
-  - MapEngine
-  - MapMediaExt
+prefix: boiler
+depend: [MapEngine, MapMediaExt, voicechat]

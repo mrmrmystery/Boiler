@@ -2,19 +2,14 @@ package net.somewhatcity.boiler.display.sources;
 
 import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.clientside.IMapDisplay;
-import de.pianoman911.mapengine.api.event.MapClickEvent;
-import net.somewhatcity.boiler.Boiler;
+import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.display.LoadedMapDisplay;
-import org.bukkit.Bukkit;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
+import org.bukkit.entity.Player;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class WhiteboardSource extends Source implements Listener {
-
-
+public class WhiteboardSource implements BoilerSource {
 
     private IMapDisplay display;
 
@@ -25,10 +20,13 @@ public class WhiteboardSource extends Source implements Listener {
     private Graphics2D canvas;
     private Color selectedColor = Color.RED;
 
+    int lastX = -1;
+    int lastY = -1;
+    long paintTime = 0;
+
     @Override
-    public void load(LoadedMapDisplay loadedMapDisplay, IMapDisplay display, JsonObject data) {
-        this.display = display;
-        Bukkit.getPluginManager().registerEvents(this, Boiler.getPlugin());
+    public void load(LoadedMapDisplay lmd, JsonObject data) {
+        this.display = lmd.getMapDisplay();
         image = new BufferedImage(display.width() * 128, display.height() * 128, BufferedImage.TYPE_INT_RGB);
         g = image.createGraphics();
         g.setColor(Color.GRAY);
@@ -68,42 +66,36 @@ public class WhiteboardSource extends Source implements Listener {
 
     @Override
     public void unload() {
-        MapClickEvent.getHandlerList().unregister(this);
+
     }
 
     @Override
-    public BufferedImage getFrame() {
-        return image;
+    public void onclick(int x, int y, Player player) {
+        if(y < 50) {
+            selectedColor = new Color(image.getRGB(x, y));
+        } else {
+
+            if(lastX != -1 && lastY != -1 && paintTime > System.currentTimeMillis() - 250) {
+                canvas.setColor(selectedColor);
+                canvas.setStroke(new BasicStroke(5));
+                canvas.drawLine(lastX, lastY, x, y - 50);
+            } else {
+                canvas.setColor(selectedColor);
+                canvas.fillOval(x, y - 50, 5, 5);
+            }
+
+            lastX = x;
+            lastY = y - 50;
+
+            paintTime = System.currentTimeMillis();
+
+
+            g.drawImage(canvasImage, 0, 50, null);
+        }
     }
 
-    int lastX = -1;
-    int lastY = -1;
-    long paintTime = 0;
-
-    @EventHandler
-    public void onScreenClick(MapClickEvent e) {
-        if(e.display().equals(display)){
-            if(e.y() < 50) {
-                selectedColor = new Color(image.getRGB(e.x(), e.y()));
-            } else {
-
-                if(lastX != -1 && lastY != -1 && paintTime > System.currentTimeMillis() - 250) {
-                    canvas.setColor(selectedColor);
-                    canvas.setStroke(new BasicStroke(5));
-                    canvas.drawLine(lastX, lastY, e.x(), e.y() - 50);
-                } else {
-                    canvas.setColor(selectedColor);
-                    canvas.fillOval(e.x(), e.y() - 50, 5, 5);
-                }
-
-                lastX = e.x();
-                lastY = e.y() - 50;
-
-                paintTime = System.currentTimeMillis();
-
-
-                g.drawImage(canvasImage, 0, 50, null);
-            }
-        }
+    @Override
+    public BufferedImage image() {
+        return image;
     }
 }

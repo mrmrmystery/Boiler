@@ -27,6 +27,7 @@ public class BoilerConfig {
         insertDefault("ping_limit", 100);
         insertDefault("database.type", "sqlite");
         insertDefault("database.file", "boiler.db");
+        insertDefault("debug", false);
 
     }
 

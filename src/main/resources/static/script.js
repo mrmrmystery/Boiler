@@ -87,3 +87,34 @@ function render() {
     }, 'image/jpeg', Iquality);
 }
 
+async function setupMicrophoneWorklet() {
+    try {
+        await audioContext.audioWorklet.addModule('microphone-worklet.js');
+        const microphoneWorkletNode = new AudioWorkletNode(audioContext, 'microphone-worklet');
+
+
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const microphoneSource = audioContext.createMediaStreamSource(stream);
+        microphoneSource.connect(microphoneWorkletNode);
+        microphoneWorkletNode.connect(audioContext.destination);
+
+        console.log('Mikrofonzugriff aktiviert!');
+    } catch (err) {
+        console.error('Fehler beim Einrichten des AudioWorklets:', err);
+    }
+}
+
+// AudioContext erstellen
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let currentTime = audioContext.currentTime;
+
+// Starte die Audiobearbeitung
+audioContext.suspend();
+
+// Benutzerinteraktion erforderlich, um den AudioContext zu starten
+document.addEventListener('click', async () => {
+    await audioContext.resume();
+    currentTime = audioContext.currentTime;
+    await setupMicrophoneWorklet();
+});

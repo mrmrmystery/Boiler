@@ -1,7 +1,6 @@
 package net.somewhatcity.boiler.db;
 
 import jakarta.persistence.*;
-import net.somewhatcity.boiler.display.sources.Source;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -56,7 +55,7 @@ public class SMapDisplay {
         return facing;
     }
 
-    public String getSourceType() {
+    public String getSourceName() {
         return sourceType;
     }
 
@@ -76,8 +75,8 @@ public class SMapDisplay {
         this.savedData = savedData;
     }
 
-    public void setSourceType(String sourceType) {
-        this.sourceType = sourceType;
+    public void setSourceName(String sourceName) {
+        this.sourceType = sourceName;
     }
 
     public void setLocationA(Location locationA) {

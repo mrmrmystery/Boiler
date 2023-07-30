@@ -1,7 +1,12 @@
 package net.somewhatcity.boiler.display.sources;
 
 import com.google.gson.JsonObject;
-import de.pianoman911.mapengine.api.clientside.IMapDisplay;
+import dev.jorel.commandapi.CommandAPICommand;
+import dev.jorel.commandapi.arguments.Argument;
+import dev.jorel.commandapi.arguments.GreedyStringArgument;
+import dev.jorel.commandapi.arguments.IntegerArgument;
+import net.somewhatcity.boiler.api.BoilerCreateCommand;
+import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.display.LoadedMapDisplay;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -19,18 +24,31 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class GIFSource extends Source {
+public class GIFSource implements BoilerSource {
 
     ImageFrame[] frames;
+    Timer timer;
     int framePointer = 0;
 
     @Override
-    public void load(LoadedMapDisplay loadedMapDisplay, IMapDisplay display, JsonObject data) {
+    public void load(LoadedMapDisplay display, JsonObject data) {
         String url = data.get("url").getAsString();
+        int delay = data.get("delay").getAsInt();
         try{
             InputStream stream = new URL(url).openStream();
             frames = readGif(stream);
+            timer = new Timer();
+            timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    framePointer++;
+                    if(framePointer >= frames.length) framePointer = 0;
+                }
+            }, 0, delay);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -38,15 +56,18 @@ public class GIFSource extends Source {
 
     @Override
     public void unload() {
-
+        if(timer != null) timer.cancel();
     }
 
     @Override
-    public BufferedImage getFrame() {
-        if(frames == null || frames.length == 0) return null;
-        framePointer++;
-        if(framePointer >= frames.length) framePointer = 0;
+    public BufferedImage image() {
+        if(frames == null) return null;
         return frames[framePointer].image;
+    }
+
+    @BoilerCreateCommand
+    public static java.util.List<Argument<?>> command() {
+        return List.of(new IntegerArgument("delay"), new GreedyStringArgument("url"));
     }
 
     public ImageFrame[] readGif(InputStream stream) throws IOException {
@@ -195,6 +216,7 @@ public class GIFSource extends Source {
         return frames.toArray(new ImageFrame[frames.size()]);
     }
 
+
     private class ImageFrame {
         private final int delay;
         private final BufferedImage image;
@@ -237,4 +259,6 @@ public class GIFSource extends Source {
             return height;
         }
     }
+
+
 }

@@ -11,20 +11,17 @@
 package net.somewhatcity.boiler.display.sources;
 
 import com.google.gson.JsonObject;
-import de.pianoman911.mapengine.api.clientside.IMapDisplay;
 import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.api.ui.BoilerUI;
-import net.somewhatcity.boiler.api.ui.components.BCheckBox;
-import net.somewhatcity.boiler.api.ui.components.BFrame;
+import net.somewhatcity.boiler.api.ui.components.*;
 import net.somewhatcity.boiler.display.LoadedMapDisplay;
-import net.somewhatcity.boiler.display.MapDisplayManager;
 import net.somewhatcity.boiler.util.Assets;
 import org.bukkit.entity.Player;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class SettingSource implements BoilerSource {
+public class CustomUISource implements BoilerSource {
 
     private BoilerUI ui;
 
@@ -33,21 +30,29 @@ public class SettingSource implements BoilerSource {
         ui = new BoilerUI(display);
         BFrame frame = ui.getFrame();
 
-        BCheckBox cbDithering = new BCheckBox(5, 5, "Dithering", display.getOption("dithering", false));
-        cbDithering.addClickListener(player -> {
-            player.sendMessage("Dithering is " + (cbDithering.checked ? "enabled" : "disabled") + " for this map.");
-            display.setOption("dithering", cbDithering.checked);
-            display.reloadOptions();
+        BButton button = new BButton(10, 10, "Click me!");
+        button.addClickListener(player -> {
+            player.sendMessage("You clicked the button!");
         });
-        frame.add(cbDithering);
+        frame.add(button);
 
-        BCheckBox cbCaching = new BCheckBox(5, 20, "Caching", display.getOption("caching", true));
-        cbCaching.addClickListener(player -> {
-            player.sendMessage("Caching is " + (cbCaching.checked ? "enabled" : "disabled") + " for this map.");
-            display.setOption("caching", cbCaching.checked);
-            display.reloadOptions();
-        });
-        frame.add(cbCaching);
+        BTextBox textBox = new BTextBox(10, 30, 300, 100, "Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World! Hello World!");
+        frame.add(textBox);
+
+        BCheckBox checkBox1 = new BCheckBox(10, 280);
+        frame.add(checkBox1);
+        BCheckBox checkBox2 = new BCheckBox(10, 260, "CheckBox with Label");
+        frame.add(checkBox2);
+
+        BFrame topFrame = new BFrame(200, 100, 300, 100);
+        topFrame.backgroundColor = Color.decode("#3737dc");
+        topFrame.add(new BButton(10, 10, "Hi"));
+        topFrame.add(new BTextBox(10, 30, 150, 20, "Another Frame on top"));
+        topFrame.add(new BSlider(10, 60, 150, 20));
+        frame.add(topFrame);
+
+        BImage image = new BImage(10, 150, 100, 100, Assets.SETTINGS_BG);
+        frame.add(image);
     }
 
     @Override

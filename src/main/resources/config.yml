@@ -12,3 +12,6 @@ ping_limit: 100
 database:
   type: sqlite
   file: "boiler.db"
+
+# debug mode
+debug: false

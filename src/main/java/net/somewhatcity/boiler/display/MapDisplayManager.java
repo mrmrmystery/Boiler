@@ -2,17 +2,15 @@ package net.somewhatcity.boiler.display;
 
 import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.clientside.IMapDisplay;
+import net.somewhatcity.boiler.Boiler;
+import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.db.DB;
 import net.somewhatcity.boiler.db.SMapDisplay;
-import net.somewhatcity.boiler.display.sources.Source;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.hibernate.Session;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 public class MapDisplayManager {
 
@@ -20,6 +18,8 @@ public class MapDisplayManager {
     private static List<LoadedMapDisplay> loadedMapDisplays = new ArrayList<>();
     private static List<LoadedMapDisplay> loadedMapDisplaysToAdd = new ArrayList<>();
     private static List<LoadedMapDisplay> loadedMapDisplaysToRemove = new ArrayList<>();
+
+    private static HashMap<String, Class<?>> sourceList = new HashMap<>();
 
     public static void loadAll() {
 
@@ -33,6 +33,10 @@ public class MapDisplayManager {
             session.getTransaction().commit();
         }
         startTickTimer();
+    }
+
+    public static void unloadAll() {
+        loadedMapDisplays.forEach(LoadedMapDisplay::delete);
     }
 
     public static void startTickTimer() {
@@ -49,14 +53,14 @@ public class MapDisplayManager {
         }, 0, 50);
     }
 
-    public static void createNew(Location locationA, Location locationB, BlockFace face, String sourceType, String savedData) {
+    public static void createNew(Location locationA, Location locationB, BlockFace face, String sourceName, String savedData) {
         try(Session session = DB.openSession()) {
             session.beginTransaction();
             SMapDisplay sMapDisplay = new SMapDisplay();
             sMapDisplay.setLocationA(locationA);
             sMapDisplay.setLocationB(locationB);
             sMapDisplay.setFacing(face);
-            sMapDisplay.setSourceType(sourceType);
+            sMapDisplay.setSourceName(sourceName);
             sMapDisplay.setSavedData(savedData);
             sMapDisplay.setDisplaySettings("{\"caching\": true,\"dithering\": false}");
             session.persist(sMapDisplay);
@@ -79,17 +83,27 @@ public class MapDisplayManager {
         }
     }
 
-    public static void setSource(int id, String sourceType, String savedData) {
+    public static void setSource(int id, String sourceName, String savedData) {
         try(Session session = DB.openSession()) {
             session.beginTransaction();
             SMapDisplay sMapDisplay = session.get(SMapDisplay.class, id);
-            sMapDisplay.setSourceType(sourceType);
+            sMapDisplay.setSourceName(sourceName);
             sMapDisplay.setSavedData(savedData);
             session.update(sMapDisplay);
             LoadedMapDisplay loadedMapDisplay = loadedMapDisplays.stream().filter(display -> display.getId() == id).findFirst().orElse(null);
             if(loadedMapDisplay != null){
-                loadedMapDisplay.setSource(sourceType, savedData);
+                loadedMapDisplay.setSource(sourceName, savedData);
             }
+            session.getTransaction().commit();
+        }
+    }
+
+    public static void saveMapDisplayData(int id, String savedData) {
+        try(Session session = DB.openSession()) {
+            session.beginTransaction();
+            SMapDisplay sMapDisplay = session.get(SMapDisplay.class, id);
+            sMapDisplay.setSavedData(savedData);
+            session.merge(sMapDisplay);
             session.getTransaction().commit();
         }
     }
@@ -102,7 +116,7 @@ public class MapDisplayManager {
             session.update(sMapDisplay);
             LoadedMapDisplay loadedMapDisplay = loadedMapDisplays.stream().filter(display -> display.getId() == id).findFirst().orElse(null);
             if(loadedMapDisplay != null){
-                loadedMapDisplay.setSettings(object);
+                //loadedMapDisplay.setSettings(object);
             }
             session.getTransaction().commit();
         }
@@ -118,5 +132,33 @@ public class MapDisplayManager {
 
     public static List<LoadedMapDisplay> getLoadedMapDisplays() {
         return loadedMapDisplays;
+    }
+
+    public static void registerSource(String sourceName, Class<?> sourceClass) {
+        if(!BoilerSource.class.isAssignableFrom(sourceClass)) {
+            Boiler.LOGGER.warn("Source class " + sourceClass.getName() + " does not implement BoilerSource");
+            return;
+        }
+        if(sourceName == null || sourceName.isEmpty()) {
+            Boiler.LOGGER.warn("Source of class " + sourceClass.getName() + " has no name");
+            return;
+        }
+        if(sourceList.containsKey(sourceName)) {
+            Boiler.LOGGER.warn("Source of class " + sourceClass.getName() + " has the same name as another source");
+            return;
+        }
+        sourceList.put(sourceName, sourceClass);
+    }
+
+    public static Class<?> getSource(String name) {
+        return sourceList.get(name);
+    }
+
+    public static List<String> getSourceNames() {
+        return new ArrayList<>(sourceList.keySet());
+    }
+
+    public static HashMap<String, Class<?>> getSourceList() {
+        return sourceList;
     }
 }

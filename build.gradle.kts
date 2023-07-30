@@ -13,6 +13,8 @@ repositories {
         name = "tjcserver"
     }
     maven ("https://jitpack.io")
+    maven ("https://maven.maxhenkel.de/repository/public")
+    maven ("https://m2.dv8tion.net/releases")
 }
 
 dependencies {
@@ -27,6 +29,10 @@ dependencies {
     implementation("dev.jorel:commandapi-bukkit-shade:9.0.3")
     implementation("io.javalin:javalin:5.6.0")
     implementation("org.slf4j:slf4j-simple:2.0.7")
+    implementation("de.maxhenkel.voicechat:voicechat-api:2.4.11")
+    implementation("com.sedmelluq:lavaplayer:1.3.77")
+    implementation("log4j:log4j:1.2.17")
+
 
 }
 
@@ -34,6 +40,9 @@ tasks {
 
     shadowJar {
         relocate("dev.jorel.commandapi", "net.somewhatcity.mapdisplays.commandapi")
+        dependencies {
+            exclude(dependency("de.maxhenkel.voicechat:voicechat-api:2.4.11"))
+        }
 
         doLast() {
             copy {

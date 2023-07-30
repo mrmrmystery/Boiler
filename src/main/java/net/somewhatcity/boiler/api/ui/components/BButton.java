@@ -8,32 +8,41 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package net.somewhatcity.boiler.util;
+package net.somewhatcity.boiler.api.ui.components;
 
-import javax.imageio.ImageIO;
+import net.somewhatcity.boiler.api.ui.UiUtils;
+
 import java.awt.*;
-import java.awt.image.BufferedImage;
+import java.awt.geom.RoundRectangle2D;
 
-public class Assets {
+public class BButton extends BComponent {
 
-    public static BufferedImage SETTINGS_BG;
-    public static BufferedImage SETTINGS_ON;
-    public static BufferedImage SETTINGS_OFF;
+    public int cornerRadius = 0;
 
-    public static Font MINECRAFTIA;
-
-    public static void load() {
-        try {
-            SETTINGS_BG = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings.png"));
-            SETTINGS_ON = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings_on.png"));
-            SETTINGS_OFF = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings_off.png"));
-
-            Font font = Font.createFont(Font.TRUETYPE_FONT, Assets.class.getResource("/assets/Minecraftia.ttf").openStream()).deriveFont(8F);
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
-            MINECRAFTIA = font;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public BButton(int x, int y, String text) {
+        super(x, y, 60, 15);
+        this.text = text;
     }
 
+    public BButton(int x, int y, int width, int height, String text) {
+        super(x, y, width, height);
+        this.text = text;
+    }
+
+    public BButton(int x, int y, int width, int height, String text, ClickEvent clickListener) {
+        super(x, y, width, height);
+        this.text = text;
+        this.clickListeners.add(clickListener);
+    }
+
+    @Override
+    public void paintComponent(Graphics2D g2) {
+        //super.paintComponent(g2);
+        g2.setColor(primaryColor);
+        RoundRectangle2D rect = new RoundRectangle2D.Float(0, 0, width, height, cornerRadius, cornerRadius);
+        g2.fill(rect);
+        g2.draw(rect);
+        g2.setColor(textColor);
+        UiUtils.drawCenteredString(g2, text, new Rectangle(0, 0, width, height), font);
+    }
 }

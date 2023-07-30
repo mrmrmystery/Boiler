@@ -8,32 +8,39 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package net.somewhatcity.boiler.util;
+package net.somewhatcity.boiler.api.ui.components;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 
-public class Assets {
-
-    public static BufferedImage SETTINGS_BG;
-    public static BufferedImage SETTINGS_ON;
-    public static BufferedImage SETTINGS_OFF;
-
-    public static Font MINECRAFTIA;
-
-    public static void load() {
-        try {
-            SETTINGS_BG = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings.png"));
-            SETTINGS_ON = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings_on.png"));
-            SETTINGS_OFF = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings_off.png"));
-
-            Font font = Font.createFont(Font.TRUETYPE_FONT, Assets.class.getResource("/assets/Minecraftia.ttf").openStream()).deriveFont(8F);
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
-            MINECRAFTIA = font;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+public class BTextBox extends BComponent {
+    public BTextBox(int x, int y, int width, int height, String text) {
+        super(x, y, width, height);
+        this.text = text;
     }
 
+    @Override
+    public void paintComponent(Graphics2D g2) {
+        int lineHeight = g2.getFontMetrics().getHeight();
+        int ty = lineHeight;
+
+        String[] words = text.split("\\s+");
+        StringBuilder currentLine = new StringBuilder();
+
+        g2.setColor(textColor);
+
+        for (String word : words) {
+            if (g2.getFontMetrics().stringWidth(currentLine + " " + word) <= width) {
+                if(word.equals(words[0]))
+                    currentLine.append(word);
+                else
+                    currentLine.append(" ").append(word);
+            } else {
+                g2.drawString(currentLine.toString(), 0, ty);
+                ty += lineHeight;
+                currentLine = new StringBuilder(word);
+            }
+        }
+
+        g2.drawString(currentLine.toString(), 0, ty);
+    }
 }

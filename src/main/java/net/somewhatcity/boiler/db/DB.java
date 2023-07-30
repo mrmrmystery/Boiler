@@ -44,6 +44,10 @@ public class DB {
         session = sessionFactory.getCurrentSession();
     }
 
+    public static void disconnect() {
+        if(sessionFactory != null) sessionFactory.close();
+    }
+
     public static Session openSession() {
         return sessionFactory.openSession();
     }

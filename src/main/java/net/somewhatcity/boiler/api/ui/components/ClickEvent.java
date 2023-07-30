@@ -8,32 +8,10 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package net.somewhatcity.boiler.util;
+package net.somewhatcity.boiler.api.ui.components;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
+import org.bukkit.entity.Player;
 
-public class Assets {
-
-    public static BufferedImage SETTINGS_BG;
-    public static BufferedImage SETTINGS_ON;
-    public static BufferedImage SETTINGS_OFF;
-
-    public static Font MINECRAFTIA;
-
-    public static void load() {
-        try {
-            SETTINGS_BG = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings.png"));
-            SETTINGS_ON = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings_on.png"));
-            SETTINGS_OFF = ImageIO.read(Assets.class.getResourceAsStream("/assets/boiler_settings_off.png"));
-
-            Font font = Font.createFont(Font.TRUETYPE_FONT, Assets.class.getResource("/assets/Minecraftia.ttf").openStream()).deriveFont(8F);
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
-            MINECRAFTIA = font;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
+public interface ClickEvent {
+    public void onClick(Player player);
 }

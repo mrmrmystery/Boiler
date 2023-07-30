@@ -1,20 +1,20 @@
 package net.somewhatcity.boiler.display.sources;
 
 import com.google.gson.JsonObject;
-import de.pianoman911.mapengine.api.clientside.IMapDisplay;
+import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.display.LoadedMapDisplay;
 import net.somewhatcity.boiler.util.Webserver;
 
 import java.awt.image.BufferedImage;
 
-public class WebSource extends Source {
+public class WebSource implements BoilerSource {
 
     private BufferedImage image;
     private LoadedMapDisplay loadedMapDisplay;
 
     @Override
-    public void load(LoadedMapDisplay loadedMapDisplay, IMapDisplay display, JsonObject data) {
-        this.loadedMapDisplay = loadedMapDisplay;
+    public void load(LoadedMapDisplay display, JsonObject data) {
+        this.loadedMapDisplay = display;
         Webserver.activeDisplays.put(loadedMapDisplay.getId(), loadedMapDisplay);
     }
 
@@ -24,7 +24,7 @@ public class WebSource extends Source {
     }
 
     @Override
-    public BufferedImage getFrame() {
+    public BufferedImage image() {
         return image;
     }
 

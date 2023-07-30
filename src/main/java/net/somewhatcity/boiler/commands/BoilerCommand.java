@@ -1,21 +1,29 @@
 package net.somewhatcity.boiler.commands;
 
 import com.google.gson.JsonObject;
-import de.pianoman911.mapengine.api.util.MapTraceResult;
+import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
-import dev.jorel.commandapi.arguments.LocationArgument;
-import dev.jorel.commandapi.arguments.LocationType;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import dev.jorel.commandapi.arguments.*;
 import net.somewhatcity.boiler.Boiler;
+import net.somewhatcity.boiler.api.BoilerCreateCommand;
+import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.display.LoadedMapDisplay;
 import net.somewhatcity.boiler.display.MapDisplayManager;
 import net.somewhatcity.boiler.util.MessageUtil;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+
 public class BoilerCommand extends CommandAPICommand {
+
+    private static Timer timer;
+
     public BoilerCommand() {
         super("boiler");
         withSubcommand(new CommandAPICommand("create")
@@ -49,109 +57,60 @@ public class BoilerCommand extends CommandAPICommand {
                     MessageUtil.sendGreen(player, "MapDisplays: %s", displays);
                 })
         );
+
+        List<CommandAPICommand> subCommands = new ArrayList<>();
+        for (Map.Entry<String, Class<?>> sources : MapDisplayManager.getSourceList().entrySet()) {
+            Class<?> source = sources.getValue();
+            Method method = null;
+            for(Method m : source.getMethods()) {
+                if(m.isAnnotationPresent(BoilerCreateCommand.class)) {
+                    method = m;
+                    break;
+                }
+            }
+
+            try {
+                List<Argument<?>> commandArguments = new ArrayList<>();
+                if(method != null) commandArguments = (List<Argument<?>>) method.invoke(null);
+                subCommands.add(new CommandAPICommand(sources.getKey())
+                        .withArguments(commandArguments)
+                        .executesPlayer((player, args) -> {
+                            LoadedMapDisplay display = (LoadedMapDisplay) args.get(0);
+                            Object[] arguments = args.args();
+                            JsonObject data = new JsonObject();
+                            args.argsMap().forEach((key, value) -> {
+                                if(!key.equals("display")) data.addProperty(key, String.valueOf(value));
+                            });
+                            MapDisplayManager.setSource(display.getId(), sources.getKey(), data.toString());
+                        })
+                );
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+
         withSubcommand(new CommandAPICommand("setsource")
-                .withSubcommand(new CommandAPICommand("image")
-                        .withArguments(new IntegerArgument("id"))
-                        .withArguments(new GreedyStringArgument("url"))
-                        .executesPlayer((player, args) -> {
-
-                            JsonObject json = new JsonObject();
-                            json.addProperty("url", (String) args.get(1));
-                            String savedData = json.toString();
-
-                            new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), "IMAGE", savedData);
-                            }).start();
-                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "IMAGE");
-                        })
-                )
-                .withSubcommand(new CommandAPICommand("gif")
-                        .withArguments(new IntegerArgument("id"))
-                        .withArguments(new GreedyStringArgument("url"))
-                        .executesPlayer((player, args) -> {
-
-                            JsonObject json = new JsonObject();
-                            json.addProperty("url", (String) args.get(1));
-                            String savedData = json.toString();
-
-                            new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), "GIF", savedData);
-                            }).start();
-
-
-                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "GIF");
-                        })
-                )
-                .withSubcommand(new CommandAPICommand("whiteboard")
-                        .withArguments(new IntegerArgument("id"))
-                        .executesPlayer((player, args) -> {
-
-                            JsonObject json = new JsonObject();
-                            String savedData = json.toString();
-
-                            new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), "WHITEBOARD", savedData);
-                            }).start();
-                            MessageUtil.sendGreen(player, "MapDisplay %s his now using %s as source.", args.get(0), "WHITEBOARD");
-                        })
-                )
-                .withSubcommand(new CommandAPICommand("web")
-                        .withArguments(new IntegerArgument("id"))
-                        .executesPlayer((player, args) -> {
-
-                            JsonObject json = new JsonObject();
-                            String savedData = json.toString();
-
-                            new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), "WEB", savedData);
-                            }).start();
-                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "WEB");
-                        })
-                )
-                .withSubcommand(new CommandAPICommand("file")
-                        .withArguments(new IntegerArgument("id"))
-                        .withArguments(new GreedyStringArgument("file"))
-                        .executesPlayer((player, args) -> {
-
-                            JsonObject json = new JsonObject();
-                            json.addProperty("file", args.get(1).toString());
-                            String savedData = json.toString();
-
-                            new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), "FILE", savedData);
-                            }).start();
-                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "FILE");
-                        })
-                )
-                .withSubcommand(new CommandAPICommand("settings")
-                        .withArguments(new IntegerArgument("id"))
-                        .executesPlayer((player, args) -> {
-                            JsonObject json = new JsonObject();
-                            String savedData = json.toString();
-
-                            new Thread(() -> {
-                                MapDisplayManager.setSource((int) args.get(0), "SETTINGS", savedData);
-                            }).start();
-                            MessageUtil.sendGreen(player, "MapDisplay %s is now using %s as source.", args.get(0), "FILE");
-                        })
-                )
-        );
-        withSubcommand(new CommandAPICommand("identify")
-                .withPermission("boiler.identify")
+                .withArguments(mapDisplayArgument("display"))
+                .withSubcommands(subCommands.toArray(new CommandAPICommand[0]))
                 .executesPlayer((player, args) -> {
-                    MapTraceResult result = LoadedMapDisplay.MAP_ENGINE.traceDisplayInView(player, 10);
-                    if(result == null) {
-                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>No MapDisplay found!"));
-                        return;
-                    }
-                    LoadedMapDisplay loadedMapDisplay = MapDisplayManager.getLoadedMapDisplay(result.display());
-                    if(loadedMapDisplay == null) {
-                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>No MapDisplay found / not from this plugin"));
-                        return;
-                    }
-                    player.sendMessage(MiniMessage.miniMessage().deserialize("<green>MapDisplay " + loadedMapDisplay.getId()));
+                    LoadedMapDisplay display = (LoadedMapDisplay) args.get(0);
+                    MapDisplayManager.setSource(display.getId(), null, "{}");
                 })
         );
+
         register();
+    }
+
+    public Argument<LoadedMapDisplay> mapDisplayArgument(String nodeName) {
+        return new CustomArgument<LoadedMapDisplay, String>(new StringArgument(nodeName), info -> {
+            LoadedMapDisplay display = MapDisplayManager.getLoadedMapDisplay(Integer.parseInt(info.input()));
+            if (display == null) {
+                throw CustomArgument.CustomArgumentException.fromMessageBuilder(new CustomArgument.MessageBuilder("Unknown display: ").appendArgInput());
+            } else {
+                return display;
+            }
+        }).replaceSuggestions(ArgumentSuggestions.strings(info ->
+                MapDisplayManager.getLoadedMapDisplays().stream().map(LoadedMapDisplay::getId).map(String::valueOf).toArray(String[]::new)
+        ));
     }
 }
