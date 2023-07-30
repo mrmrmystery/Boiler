@@ -152,7 +152,7 @@ public class LocalFileSource implements BoilerSource {
 
     @Override
     public void unload() {
-        bap.stop();
+        if(bap != null) bap.stop();
         if(videoTimer != null) videoTimer.cancel();
         if(videoDecoderThread != null) videoDecoderThread.interrupt();
         videoGrabberRunning = false;
