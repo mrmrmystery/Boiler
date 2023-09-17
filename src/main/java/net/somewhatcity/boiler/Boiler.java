@@ -7,6 +7,7 @@ import net.somewhatcity.boiler.commands.BoilerCommand;
 import net.somewhatcity.boiler.db.DB;
 import net.somewhatcity.boiler.display.MapDisplayManager;
 import net.somewhatcity.boiler.display.sources.*;
+import net.somewhatcity.boiler.display.sources.boilerClientSource.BoilerClientSource;
 import net.somewhatcity.boiler.util.Assets;
 import net.somewhatcity.boiler.util.BoilerConfig;
 import net.somewhatcity.boiler.util.Metrics;
@@ -61,6 +62,7 @@ public class Boiler extends JavaPlugin {
         MapDisplayManager.registerSource("settings", SettingSource.class);
         MapDisplayManager.registerSource("uitest", CustomUISource.class);
         MapDisplayManager.registerSource("prerenderedVideo", PrerenderedVideoSource.class);
+        MapDisplayManager.registerSource("boilerClient", BoilerClientSource.class);
 
         CommandAPI.onLoad(new CommandAPIBukkitConfig(this).verboseOutput(DEBUG));
         new BoilerCommand();

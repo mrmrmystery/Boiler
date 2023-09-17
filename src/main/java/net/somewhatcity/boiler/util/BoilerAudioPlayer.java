@@ -39,78 +39,83 @@ public class BoilerAudioPlayer {
     private Timer audioTimer;
     private AudioPlayerManager apm;
     private boolean ended = false;
+    private Thread thread;
 
     private List<TrackEndListener> listeners = new ArrayList<>();
 
     public BoilerAudioPlayer(Location location, File file) {
+        thread = new Thread(() -> {
+            VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi;
+            channel = serverApi.createLocationalAudioChannel(
+                    UUID.randomUUID(),
+                    serverApi.fromServerLevel(location.getWorld()),
+                    serverApi.createPosition(location.getX(), location.getY(), location.getZ())
+            );
 
-        VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi;
-        channel = serverApi.createLocationalAudioChannel(
-                UUID.randomUUID(),
-                serverApi.fromServerLevel(location.getWorld()),
-                serverApi.createPosition(location.getX(), location.getY(), location.getZ())
-        );
+            if(channel == null) {
+                return;
+            }
 
-        if(channel == null) {
-            return;
-        }
+            channel.setCategory("boiler");
+            channel.setDistance(100);
 
-        channel.setCategory("boiler");
-        channel.setDistance(100);
+            apm = new DefaultAudioPlayerManager();
+            AudioSourceManagers.registerRemoteSources(apm);
+            AudioSourceManagers.registerLocalSource(apm);
+            audioPlayer = apm.createPlayer();
 
-        apm = new DefaultAudioPlayerManager();
-        AudioSourceManagers.registerRemoteSources(apm);
-        AudioSourceManagers.registerLocalSource(apm);
-        audioPlayer = apm.createPlayer();
+            String url = file.getPath();
 
-        String url = file.getPath();
+            apm.loadItem(url, new AudioLoadResultHandler() {
 
-        apm.loadItem(url, new AudioLoadResultHandler() {
+                @Override
+                public void trackLoaded(AudioTrack track) {
+                    audioTrack = track;
+                    audioPlayer.playTrack(audioTrack);
+                    audioTimer = new Timer();
+                    audioTimer.scheduleAtFixedRate(new TimerTask() {
+                        @Override
+                        public void run() {
+                            try {
+                                AudioFrame frame = audioPlayer.provide(20, TimeUnit.MILLISECONDS);
+                                if (frame != null) {
+                                    channel.send(frame.getData());
+                                }
+                            } catch (Exception ex) {
 
-            @Override
-            public void trackLoaded(AudioTrack track) {
-                audioTrack = track;
-                audioPlayer.playTrack(audioTrack);
-                audioTimer = new Timer();
-                audioTimer.scheduleAtFixedRate(new TimerTask() {
-                    @Override
-                    public void run() {
-                        try {
-                            AudioFrame frame = audioPlayer.provide(20, TimeUnit.MILLISECONDS);
-                            if (frame != null) {
-                                channel.send(frame.getData());
                             }
-                        } catch (Exception ex) {
-
                         }
-                    }
-                }, 0, 20);
+                    }, 0, 20);
 
-            }
+                }
 
-            @Override
-            public void playlistLoaded(AudioPlaylist playlist) {
+                @Override
+                public void playlistLoaded(AudioPlaylist playlist) {
 
-            }
+                }
 
-            @Override
-            public void noMatches() {
+                @Override
+                public void noMatches() {
 
-            }
+                }
 
-            @Override
-            public void loadFailed(FriendlyException exception) {
+                @Override
+                public void loadFailed(FriendlyException exception) {
 
-            }
+                }
+            });
+
+            audioPlayer.addListener(new AudioEventAdapter() {
+                @Override
+                public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
+                    ended = true;
+                    listeners.forEach(TrackEndListener::onTrackEnd);
+                }
+            });
         });
+        thread.setDaemon(true);
+        thread.start();
 
-        audioPlayer.addListener(new AudioEventAdapter() {
-            @Override
-            public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
-                ended = true;
-                listeners.forEach(TrackEndListener::onTrackEnd);
-            }
-        });
     }
 
     public boolean hasEnded() {
@@ -118,9 +123,10 @@ public class BoilerAudioPlayer {
     }
 
     public void stop() {
-        audioPlayer.stopTrack();
-        audioTimer.cancel();
-        channel.flush();
+        if(thread != null) thread.interrupt();
+        if(audioPlayer != null) audioPlayer.stopTrack();
+        if(audioTimer != null) audioTimer.cancel();
+        if(channel != null) channel.flush();
     }
 
     public long getPosition() {

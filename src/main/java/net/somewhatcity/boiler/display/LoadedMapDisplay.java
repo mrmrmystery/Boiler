@@ -12,6 +12,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.somewhatcity.boiler.Boiler;
 import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.db.SMapDisplay;
+import net.somewhatcity.boiler.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -23,6 +24,7 @@ import org.bukkit.util.BlockVector;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.List;
 import java.util.logging.Level;
@@ -40,6 +42,7 @@ public class LoadedMapDisplay implements Listener {
     private IMapDisplay mapDisplay;
     private IDrawingSpace drawingSpace;
     public List<Player> VISIBLE_FOR = new ArrayList<>();
+    public Set<Player> PING_LIMIT = new HashSet<>();
     private int ping_limit = 100;
     private int viewDistance = 100;
     private JsonObject settings;
@@ -125,7 +128,7 @@ public class LoadedMapDisplay implements Listener {
 
     public void tick() {
         Bukkit.getOnlinePlayers().forEach(player -> {
-            if(locationA.distance(player.getLocation()) < viewDistance) {
+            if(locationA.getWorld().equals(player.getWorld()) && locationA.distance(player.getLocation()) < viewDistance) {
                 if(!VISIBLE_FOR.contains(player)) {
                     VISIBLE_FOR.add(player);
                     mapDisplay.spawn(player);
@@ -147,8 +150,12 @@ public class LoadedMapDisplay implements Listener {
         for(Player player : VISIBLE_FOR) {
             if(player.getPing() < ping_limit) {
                 drawingSpace.ctx().receivers().add(player);
+                PING_LIMIT.remove(player);
             } else {
-                player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Ping too high to render map display!"));
+                if(!PING_LIMIT.contains(player)) {
+                    PING_LIMIT.add(player);
+                    MessageUtil.sendRed(player, "Ping too high to render map display! (%sms)", player.getPing());
+                }
             }
         }
         int[] rgb;
@@ -193,7 +200,8 @@ public class LoadedMapDisplay implements Listener {
     @EventHandler
     public void onClick(MapClickEvent e) {
         if(!e.display().equals(mapDisplay)) return;
-        selectedSource.onclick(e.x(), e.y(), e.player());
+        if(!e.player().hasPermission("boiler.interact")) return;
+        if(selectedSource != null) selectedSource.onclick(e.x(), e.y(), e.player());
     }
 
     public void delete() {
@@ -219,9 +227,17 @@ public class LoadedMapDisplay implements Listener {
             }
 
             JsonObject data = JsonParser.parseString(savedData).getAsJsonObject();
-            BoilerSource source = (BoilerSource) sourceClass.getDeclaredConstructor().newInstance();
-            source.load(this, data);
-            selectedSource = source;
+            new Thread(() -> {
+                BoilerSource source = null;
+                try {
+                    source = (BoilerSource) sourceClass.getDeclaredConstructor().newInstance();
+                } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                         NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+                source.load(this, data);
+                selectedSource = source;
+            }).start();
         } catch (Exception ex) {
             Boiler.getPlugin().getLogger().log(Level.WARNING, "Failed to load source for map display " + id, ex);
         }

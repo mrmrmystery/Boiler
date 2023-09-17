@@ -138,13 +138,14 @@ public class LocalFileSource implements BoilerSource {
         if(file.getName().endsWith(".mp4")) {
             try {
                 loadVideo(file);
+                Thread.sleep(100);
                 bap = new BoilerAudioPlayer(display.getCenter(), file);
                 bap.addListener(() -> {
-                    if(loop.checked) {
+                    if(loop.checked && jsonData.has("executor")) {
                         MapDisplayManager.setSource(display.getId(), "file", jsonData.toString());
                     }
                 });
-            } catch (FFmpegFrameGrabber.Exception e) {
+            } catch (FFmpegFrameGrabber.Exception | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -176,8 +177,6 @@ public class LocalFileSource implements BoilerSource {
         grabber.setFormat("mp4");
         grabber.setFrameRate(30);
         grabber.start();
-
-
 
         slider.max = grabber.getLengthInFrames();
 

@@ -1,6 +1,9 @@
 package net.somewhatcity.boiler.commands;
 
 import com.google.gson.JsonObject;
+import de.pianoman911.mapengine.api.MapEngineApi;
+import de.pianoman911.mapengine.api.clientside.IMapDisplay;
+import de.pianoman911.mapengine.api.util.MapTraceResult;
 import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.*;
@@ -10,6 +13,7 @@ import net.somewhatcity.boiler.api.BoilerSource;
 import net.somewhatcity.boiler.display.LoadedMapDisplay;
 import net.somewhatcity.boiler.display.MapDisplayManager;
 import net.somewhatcity.boiler.util.MessageUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 
@@ -22,11 +26,12 @@ import java.util.Timer;
 
 public class BoilerCommand extends CommandAPICommand {
 
-    private static Timer timer;
+    public static final MapEngineApi MAP_ENGINE = Bukkit.getServicesManager().getRegistration(MapEngineApi.class).getProvider();
 
     public BoilerCommand() {
         super("boiler");
         withSubcommand(new CommandAPICommand("create")
+                .withPermission("boiler.command.create")
                 .withArguments(new LocationArgument("locationA", LocationType.BLOCK_POSITION))
                 .withArguments(new LocationArgument("locationB", LocationType.BLOCK_POSITION))
                 .executesPlayer((player, args) -> {
@@ -42,6 +47,7 @@ public class BoilerCommand extends CommandAPICommand {
                 })
         );
         withSubcommand(new CommandAPICommand("delete")
+                .withPermission("boiler.command.delete")
                 .withArguments(new IntegerArgument("id"))
                 .executesPlayer((player, args) -> {
                     MapDisplayManager.delete((int) args.get(0));
@@ -49,6 +55,7 @@ public class BoilerCommand extends CommandAPICommand {
                 })
         );
         withSubcommand(new CommandAPICommand("list")
+                .withPermission("boiler.command.list")
                 .executesPlayer((player, args) -> {
                     String displays = "";
                     for(LoadedMapDisplay display : MapDisplayManager.getLoadedMapDisplays()) {
@@ -90,11 +97,29 @@ public class BoilerCommand extends CommandAPICommand {
         }
 
         withSubcommand(new CommandAPICommand("setsource")
+                .withPermission("boiler.command.setsource")
                 .withArguments(mapDisplayArgument("display"))
                 .withSubcommands(subCommands.toArray(new CommandAPICommand[0]))
                 .executesPlayer((player, args) -> {
                     LoadedMapDisplay display = (LoadedMapDisplay) args.get(0);
                     MapDisplayManager.setSource(display.getId(), null, "{}");
+                })
+        );
+        withSubcommand(new CommandAPICommand("identify")
+                .withPermission("boiler.command.identify")
+                .executesPlayer((player, args) -> {
+                    MapTraceResult result = MAP_ENGINE.traceDisplayInView(player, 10);
+                    if(result == null) {
+                        MessageUtil.sendRed(player, "No MapDisplay found.");
+                    } else {
+                        IMapDisplay display = result.display();
+                        LoadedMapDisplay ldm = MapDisplayManager.getLoadedMapDisplay(display);
+                        if(ldm == null) {
+                            MessageUtil.sendRed(player, "This display was not created by boiler");
+                        } else {
+                            MessageUtil.sendGreen(player, "Looking at MapDisplay %s", ldm.getId());
+                        }
+                    }
                 })
         );
 
