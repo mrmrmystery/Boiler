@@ -43,6 +43,7 @@ public class Webserver {
             });
             app.ws("/ws", ws -> {
                 ws.onConnect(ctx -> {
+
                 });
                 ws.onMessage(ctx -> {
                 });

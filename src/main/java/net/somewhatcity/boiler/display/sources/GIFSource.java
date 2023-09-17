@@ -32,7 +32,7 @@ public class GIFSource implements BoilerSource {
 
     ImageFrame[] frames;
     Timer timer;
-    int framePointer = 0;
+    int frameNumber = 0;
 
     @Override
     public void load(LoadedMapDisplay display, JsonObject data) {
@@ -45,8 +45,8 @@ public class GIFSource implements BoilerSource {
             timer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-                    framePointer++;
-                    if(framePointer >= frames.length) framePointer = 0;
+                    frameNumber++;
+                    if(frameNumber >= frames.length) frameNumber = 0;
                 }
             }, 0, delay);
         } catch (IOException e) {
@@ -62,7 +62,7 @@ public class GIFSource implements BoilerSource {
     @Override
     public BufferedImage image() {
         if(frames == null) return null;
-        return frames[framePointer].image;
+        return frames[frameNumber].image;
     }
 
     @BoilerCreateCommand

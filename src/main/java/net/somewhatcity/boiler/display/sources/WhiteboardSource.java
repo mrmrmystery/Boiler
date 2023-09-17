@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.UUID;
 
 public class WhiteboardSource implements BoilerSource {
 
@@ -22,7 +24,12 @@ public class WhiteboardSource implements BoilerSource {
 
     int lastX = -1;
     int lastY = -1;
+
+    private HashMap<UUID, Point> lastPoint = new HashMap<>();
+    private HashMap<UUID, Long> lastAction = new HashMap<>();
     long paintTime = 0;
+
+
 
     @Override
     public void load(LoadedMapDisplay lmd, JsonObject data) {
@@ -74,21 +81,19 @@ public class WhiteboardSource implements BoilerSource {
         if(y < 50) {
             selectedColor = new Color(image.getRGB(x, y));
         } else {
-
-            if(lastX != -1 && lastY != -1 && paintTime > System.currentTimeMillis() - 250) {
+            if(lastPoint.containsKey(player.getUniqueId()) && lastAction.containsKey(player.getUniqueId()) && lastAction.get(player.getUniqueId()) > System.currentTimeMillis() -250) {
+                Point last = lastPoint.get(player.getUniqueId());
                 canvas.setColor(selectedColor);
                 canvas.setStroke(new BasicStroke(5));
-                canvas.drawLine(lastX, lastY, x, y - 50);
+                canvas.drawLine(last.x, last.y, x, y - 50);
             } else {
                 canvas.setColor(selectedColor);
                 canvas.fillOval(x, y - 50, 5, 5);
             }
 
-            lastX = x;
-            lastY = y - 50;
-
-            paintTime = System.currentTimeMillis();
-
+            Point now = new Point(x, y - 50);
+            lastPoint.put(player.getUniqueId(), now);
+            lastAction.put(player.getUniqueId(), System.currentTimeMillis());
 
             g.drawImage(canvasImage, 0, 50, null);
         }
