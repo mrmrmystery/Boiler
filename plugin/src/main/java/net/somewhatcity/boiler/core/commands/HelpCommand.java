@@ -17,7 +17,7 @@ public class HelpCommand extends CommandAPICommand {
     public HelpCommand() {
         super("help");
         executes((sender, args) -> {
-            Util.sendMsg(sender,"Visit the docs %s", "<u><click:open_url:'https://boiler.docs.hnwh.xyz/'>here</click></u>");
+            Util.sendMsg(sender,"Visit the docs %s", "<u><click:open_url:'https://github.com/mrmrmystery/Boiler/wiki'>here</click></u>");
         });
     }
 }
