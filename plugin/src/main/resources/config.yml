@@ -1,0 +1,6 @@
+boiler:
+  settings:
+    gui_enabled: false
+    view_distance: 100
+boiler.nextId: 0
+boiler.displays:
