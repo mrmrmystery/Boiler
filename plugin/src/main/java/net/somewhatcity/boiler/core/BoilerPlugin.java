@@ -24,7 +24,6 @@ import net.somewhatcity.boiler.common.platform.IPlatform;
 import net.somewhatcity.boiler.core.api.ImplBoilerApi;
 import net.somewhatcity.boiler.core.audio.AudioManager;
 import net.somewhatcity.boiler.core.commands.BoilerCommand;
-import net.somewhatcity.boiler.core.display.BoilerDisplayManager;
 import net.somewhatcity.boiler.core.display.BoilerSourceManager;
 import net.somewhatcity.boiler.core.display.ImplDisplayManager;
 import net.somewhatcity.boiler.core.gui.ImplGuiManager;
@@ -78,9 +77,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("default", DefaultSource.class, false);
         this.sourceManager.register("error", ErrorSource.class, false);
         this.sourceManager.register("image", ImageSource.class);
-        this.sourceManager.register("test", TestSource.class);
-        this.sourceManager.register("video", VideoSource.class);
-        this.sourceManager.register("stream", StreamSource.class);
+        this.sourceManager.register("ffmpeg", FFMPEGSource.class);
         this.sourceManager.register("twitch", TwitchSource.class);
         this.sourceManager.register("rtmp", RTMPSource.class);
         //this.sourceManager.register("clone", CloneSource.class);

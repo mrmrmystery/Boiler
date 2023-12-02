@@ -18,6 +18,7 @@ import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.commands.BoilerArguments;
+import net.somewhatcity.boiler.core.commands.BoilerCommand;
 import net.somewhatcity.boiler.core.sources.hidden.DefaultSource;
 
 import java.lang.reflect.InvocationTargetException;
@@ -33,6 +34,8 @@ public class DisplaySourceCommand extends CommandAPICommand {
         withArguments(BoilerArguments.displayArgument("display"));
 
         BoilerPlugin.getPlugin().sourceManager().sources().forEach((name, source) -> {
+            if(!BoilerPlugin.getPlugin().sourceManager().commandVisibleSourceNames().contains(name)) return;
+
             try {
                 Method method = source.getMethod("creationArguments");
                 List<Argument<?>> Carguments = (List<Argument<?>>) method.invoke(null);
@@ -66,7 +69,9 @@ public class DisplaySourceCommand extends CommandAPICommand {
         });
 
         executes(((sender, args) -> {
-            Util.sendErrMsg(sender, "Please specify a source");
+            IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+            display.source("default", new JsonObject());
+            Util.sendMsg(sender, "Reset source of display %s", display.id());
         }));
     }
 }
