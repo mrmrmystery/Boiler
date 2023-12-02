@@ -64,8 +64,7 @@ public class ImplDisplayManager implements IDisplayManager {
     }
     @Override
     public IBoilerDisplay createDisplay(Location a, Location b, BlockFace face) {
-        createDisplay(a,b, face, true, true);
-        return null;
+        return createDisplay(a,b, face, true, true);
     }
 
     @Override
