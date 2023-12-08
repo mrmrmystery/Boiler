@@ -74,7 +74,9 @@ public class FFMPEGSource implements IBoilerSource {
             public short[] get() {
                 short[] data = new short[960];
                 for(int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
-                    data[i] = audioQueue.poll();
+                    data[i] = 0;
+                    Object o = audioQueue.poll();
+                    if(o != null) data[i] = (short) o;
                 }
                 return data;
             }
@@ -106,13 +108,14 @@ public class FFMPEGSource implements IBoilerSource {
 
                 grabber.start();
 
+                long lastFrame = System.currentTimeMillis();
                 SOURCE_FORMAT = new AudioFormat(grabber.getSampleRate(), 16, grabber.getAudioChannels(), true, true);
                 while (running) {
                     try {
                         long start = System.nanoTime();
                         Frame frame = grabber.grabFrame();
 
-                        if(frame == null) {
+                        if(frame == null && lastFrame < System.currentTimeMillis() - 1000 * 10) {
                             if(loop) {
                                 grabber.restart();
                                 continue;
@@ -151,6 +154,8 @@ public class FFMPEGSource implements IBoilerSource {
                             }
                         }
 
+                        lastFrame = System.currentTimeMillis();
+
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -168,6 +173,8 @@ public class FFMPEGSource implements IBoilerSource {
     @Override
     public void unload() {
         running = false;
+        audioPlayer.stopPlaying();
+        audioQueue.clear();
         //bap.stop();
     }
 

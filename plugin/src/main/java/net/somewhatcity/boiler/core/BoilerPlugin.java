@@ -10,9 +10,6 @@
 
 package net.somewhatcity.boiler.core;
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import de.pianoman911.mapengine.api.MapEngineApi;
 import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPIBukkitConfig;
@@ -46,7 +43,6 @@ public class BoilerPlugin extends JavaPlugin {
     private IDisplayManager displayManager;
     private ISourceManager sourceManager;
     private IGuiManager guiManager;
-    private AudioPlayerManager audioPlayerManager;
     @Override
     public void onLoad() {
         plugin = this;
@@ -67,10 +63,6 @@ public class BoilerPlugin extends JavaPlugin {
             AudioManager.loadSimpleVoiceChat();
         }
 
-        audioPlayerManager = new DefaultAudioPlayerManager();
-        AudioSourceManagers.registerRemoteSources(audioPlayerManager);
-        AudioSourceManagers.registerLocalSource(audioPlayerManager);
-
         this.displayManager = new ImplDisplayManager(this);
 
         this.sourceManager = new BoilerSourceManager(this);
@@ -79,6 +71,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("image", ImageSource.class);
         this.sourceManager.register("ffmpeg", FFMPEGSource.class);
         this.sourceManager.register("twitch", TwitchSource.class);
+        this.sourceManager.register("youtube", YoutubeSource.class);
         this.sourceManager.register("rtmp", RTMPSource.class);
         //this.sourceManager.register("clone", CloneSource.class);
 
@@ -114,9 +107,6 @@ public class BoilerPlugin extends JavaPlugin {
 
     public IPlatform<?> platform() {
         return platform;
-    }
-    public AudioPlayerManager getAudioPlayerManager() {
-        return audioPlayerManager;
     }
     public static BoilerPlugin getPlugin() {
         return plugin;
