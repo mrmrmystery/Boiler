@@ -53,6 +53,6 @@ bukkit {
     authors = listOf("mrmrmystery")
     name = rootProject.name
     depend = listOf("MapEngine", "MapMediaExt", "voicechat")
-    version = "2.0.2"
+    version = "2.0.3"
     //softDepend = listOf("voicechat")
 }
