@@ -20,7 +20,7 @@ import java.util.Optional;
 public class Paper1203Provider implements IPlatformProvider {
     @Override
     public Optional<IPlatform<?>> tryProvide(Plugin plugin, IListenerBridge bridge) {
-        if(IPlatformProvider.existsClass("org.bukkit.craftbukkit.v1_20_R2.CraftServer")) {
+        if(IPlatformProvider.existsClass("org.bukkit.craftbukkit.v1_20_R3.CraftServer")) {
             return Optional.of(Paper1203StaticProvider.provide(plugin, bridge));
         }
         return Optional.empty();

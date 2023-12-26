@@ -51,7 +51,7 @@ public class ImplDisplayManager implements IDisplayManager {
             }
         }, 0, 1000);
 
-        Bukkit.getScheduler().runTask(plugin, this::loadDisplays);
+        Bukkit.getScheduler().runTaskLater(plugin, this::loadDisplays, 20);
     }
 
     private int nextId() {

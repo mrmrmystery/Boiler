@@ -173,7 +173,7 @@ public class FFMPEGSource implements IBoilerSource {
     @Override
     public void unload() {
         running = false;
-        audioPlayer.stopPlaying();
+        if(audioPlayer != null) audioPlayer.stopPlaying();
         audioQueue.clear();
         //bap.stop();
     }

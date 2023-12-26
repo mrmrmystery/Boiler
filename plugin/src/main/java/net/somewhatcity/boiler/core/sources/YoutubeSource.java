@@ -49,6 +49,7 @@ public class YoutubeSource implements IBoilerSource {
 
             try(Response response = client.newCall(request).execute()) {
                 String res = response.body().string();
+                System.out.println(res);
                 JsonObject json = (JsonObject) JsonParser.parseString(res);
                 if(json.has("url")) {
                     String url = json.get("url").getAsString();
