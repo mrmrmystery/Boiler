@@ -26,7 +26,7 @@ dependencies {
 
     api(project(":platform-common"))
 
-    compileOnly("de.pianoman911:mapengine-api:1.6.2")
+    compileOnly("de.pianoman911:mapengine-api:1.7.0")
     compileOnly("de.pianoman911:mapengine-mediaext:1.1.0")
 }
 

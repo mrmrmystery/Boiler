@@ -55,7 +55,6 @@ public class FFMPEGSource implements IBoilerSource {
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
     private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
-
     private boolean loop = false;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {

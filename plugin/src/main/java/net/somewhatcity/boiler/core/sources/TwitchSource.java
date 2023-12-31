@@ -105,8 +105,6 @@ public class TwitchSource implements IBoilerSource {
                 try {
                     FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(new URL(streamUrl));
                     Java2DFrameConverter jconverter = new Java2DFrameConverter();
-                    MapEngineConverter converter = new MapEngineConverter();
-
                     grabber.start();
 
                     SOURCE_FORMAT = new AudioFormat(grabber.getSampleRate(), 16, grabber.getAudioChannels(), true, true);
@@ -136,15 +134,6 @@ public class TwitchSource implements IBoilerSource {
 
                             if(frame.image != null) {
                                 image = jconverter.getBufferedImage(frame);
-                                /*
-                                FullSpacedColorBuffer buffer = converter.convert(frame);
-                                double widthScale = display.drawingSpace().buffer().width() / (double) buffer.width();
-                                double heightScale = display.drawingSpace().buffer().height() / (double) buffer.height();
-                                buffer = buffer.scale(widthScale, heightScale, true);
-                                display.drawingSpace().buffer(buffer, 0, 0);
-
-                                 */
-
                                 long offset = (long) ((1.0 / grabber.getFrameRate()) * 1000000000);
                                 long end = System.nanoTime();
                                 long sleep = offset - (end - start);

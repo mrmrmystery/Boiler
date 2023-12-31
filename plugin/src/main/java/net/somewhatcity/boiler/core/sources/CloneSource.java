@@ -18,6 +18,7 @@ import dev.jorel.commandapi.arguments.IntegerArgument;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
+import org.bukkit.Bukkit;
 
 import java.util.List;
 
@@ -39,17 +40,22 @@ public class CloneSource implements IBoilerSource {
             return;
         }
 
-        display.autoTick(false);
-
-
-        toClone.mapDisplay().cloneGroupIds(display.mapDisplay());
         display.renderPaused(true);
+        display.mapDisplay().cloneGroupIds(toClone.mapDisplay());
+
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            display.mapDisplay().mapId(player, 0);
+        });
     }
 
     @Override
     public void unload() {
-        toClone.mapDisplay().cutOffCloneGroupIds();
+        display.mapDisplay().cutOffCloneGroupIds();
         display.renderPaused(false);
+
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            display.mapDisplay().mapId(player, 0);
+        });
     }
 
     @Override

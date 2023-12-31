@@ -24,11 +24,6 @@ allprojects {
 
     tasks.withType<JavaCompile> {
         options.encoding = Charsets.UTF_8.name()
-
-        copy {
-            from("./build/libs/Boiler-1.0-SNAPSHOT-all.jar")
-            into("./testserver/plugins")
-        }
     }
 
     java {

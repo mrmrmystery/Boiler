@@ -55,6 +55,17 @@ public class DisplaySettingsCommand extends CommandAPICommand {
                     Util.sendMsg(sender, "Set %s to %s for display %s", "renderPeriod", value, display.id());
                 }))
         );
+        withSubcommand(new CommandAPICommand("bundle")
+                .withArguments(new BooleanArgument("enabled"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    int value = (int) args.get(1);
+                    display.settings().addProperty("bundle", value);
+                    display.save();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "bundle", value, display.id());
+                }))
+        );
         executes(((sender, args) -> {
             Util.sendErrMsg(sender, "Please specify an option");
         }));

@@ -73,7 +73,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("twitch", TwitchSource.class);
         this.sourceManager.register("youtube", YoutubeSource.class);
         this.sourceManager.register("rtmp", RTMPSource.class);
-        //this.sourceManager.register("clone", CloneSource.class);
+        this.sourceManager.register("clone", CloneSource.class);
 
         if(BoilerConfig.guiEnabled) guiManager = new ImplGuiManager(this);
 

@@ -45,8 +45,6 @@ public class YoutubeSource implements IBoilerSource {
                     .post(body)
                     .build();
 
-            System.out.println(request.headers());
-
             try(Response response = client.newCall(request).execute()) {
                 String res = response.body().string();
                 System.out.println(res);
@@ -62,10 +60,6 @@ public class YoutubeSource implements IBoilerSource {
                     err.addProperty("message", "Video unavailable");
                     display.source("error", err);
                 }
-
-
-
-
             } catch (IOException e) {
                 JsonObject err = new JsonObject();
                 err.addProperty("message", e.getMessage());

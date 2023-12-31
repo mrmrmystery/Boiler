@@ -172,6 +172,7 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
 
         drawingSpace.ctx().converter(settings.get("dither") != null && settings.get("dither").getAsBoolean() ? Converter.FLOYD_STEINBERG : Converter.DIRECT);
         drawingSpace.ctx().buffering(settings.get("buffer") != null && settings.get("buffer").getAsBoolean());
+        drawingSpace.ctx().bundling(settings.get("bundle") != null && settings.get("bundle").getAsBoolean());
 
         int renderPeriod = settings.get("renderPeriod") != null ? settings.get("renderPeriod").getAsInt() : 50;
 
@@ -213,18 +214,6 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
             save();
         }
 
-        /*
-        if(this.persistent) {
-            FileConfiguration config = BoilerPlugin.getPlugin().getConfig();
-
-            config.set("boiler.displays.%s.source.name".formatted(id()), name);
-            config.set("boiler.displays.%s.source.data".formatted(id()), args);
-
-            BoilerPlugin.getPlugin().saveConfig();
-        }
-
-         */
-        //JsonObject data = JsonParser.parseString(savedData).getAsJsonObject();
         new Thread(() -> {
             try {
                 source = sourceClass.getDeclaredConstructor().newInstance();
