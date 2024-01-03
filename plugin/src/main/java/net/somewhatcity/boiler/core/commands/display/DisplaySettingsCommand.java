@@ -59,7 +59,7 @@ public class DisplaySettingsCommand extends CommandAPICommand {
                 .withArguments(new BooleanArgument("enabled"))
                 .executes(((sender, args) -> {
                     IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    int value = (int) args.get(1);
+                    boolean value = (boolean) args.get(1);
                     display.settings().addProperty("bundle", value);
                     display.save();
 

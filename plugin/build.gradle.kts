@@ -36,6 +36,8 @@ tasks {
         archiveBaseName.set(rootProject.name)
 
         relocate("dev.jorel.commandapi", "net.somewhatcity.boiler.commandapi")
+        relocate("okhttp3", "net.somewhatcity.boiler.okhttp")
+        relocate("kotlin", "net.somewhatcity.boiler.kotlin")
         dependencies {
             exclude(dependency("de.maxhenkel.voicechat:voicechat-api:2.4.11"))
         }
