@@ -44,10 +44,14 @@ public class ImplDisplayManager implements IDisplayManager {
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                Collection<? extends Player> players = Bukkit.getOnlinePlayers();
-                displays.forEach((key, value) -> {
-                    if(value.autoTick()) players.forEach(value::tick);
-                });
+                try {
+                    Collection<? extends Player> players = Bukkit.getOnlinePlayers();
+                    displays.forEach((key, value) -> {
+                        if(value.autoTick()) players.forEach(value::tick);
+                    });
+                } catch (ConcurrentModificationException ex) {
+                    ex.printStackTrace();
+                }
             }
         }, 0, 1000);
 

@@ -114,7 +114,7 @@ public class FFMPEGSource implements IBoilerSource {
                         long start = System.nanoTime();
                         Frame frame = grabber.grabFrame();
 
-                        if(frame == null && lastFrame < System.currentTimeMillis() - 1000 * 10) {
+                        if(frame == null) {
                             if(loop) {
                                 grabber.restart();
                                 continue;
@@ -152,8 +152,6 @@ public class FFMPEGSource implements IBoilerSource {
                                 LockSupport.parkNanos(sleep);
                             }
                         }
-
-                        lastFrame = System.currentTimeMillis();
 
                     } catch (IOException e) {
                         throw new RuntimeException(e);

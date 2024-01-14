@@ -1,6 +1,7 @@
 plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("net.minecrell.plugin-yml.bukkit") version "0.6.0"
+    id("com.modrinth.minotaur") version "2.+"
 }
 
 repositories {
@@ -55,6 +56,21 @@ bukkit {
     authors = listOf("mrmrmystery")
     name = rootProject.name
     depend = listOf("MapEngine", "MapMediaExt", "voicechat")
-    version = "2.0.3"
+    version = rootProject.version.toString()
     //softDepend = listOf("voicechat")
+}
+
+modrinth {
+    token.set(System.getenv("MODRINTH_TOKEN"))
+    projectId.set("9R8jBgPj")
+    versionNumber.set(rootProject.version.toString())
+    versionType.set("release")
+    uploadFile.set(tasks.shadowJar)
+    gameVersions.addAll(listOf("1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4"))
+    loaders.addAll(listOf("paper", "purpur"))
+    dependencies {
+        required.project("9eGKb6K1")
+        required.project("fCDPz9mZ")
+        required.project("FMg8aS6R")
+    }
 }

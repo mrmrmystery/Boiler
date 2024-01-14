@@ -50,6 +50,7 @@ public class BoilerPlugin extends JavaPlugin {
     }
     @Override
     public void onEnable() {
+        new Metrics(this,18926);
 
         new BoilerConfig(this);
 

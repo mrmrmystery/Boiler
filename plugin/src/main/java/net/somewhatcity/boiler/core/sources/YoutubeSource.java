@@ -16,8 +16,11 @@ import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.GraphicUtils;
+import net.somewhatcity.boiler.core.Util;
 import okhttp3.*;
 
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -75,6 +78,14 @@ public class YoutubeSource implements IBoilerSource {
     @Override
     public void unload() {
 
+    }
+
+    @Override
+    public void draw(Graphics2D g2, Rectangle viewport) {
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, viewport.width, viewport.height);
+        g2.setColor(Color.WHITE);
+        GraphicUtils.centeredString(g2, viewport, "Loading video...");
     }
 
     public static java.util.List<Argument<?>> creationArguments() {
