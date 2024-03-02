@@ -21,13 +21,14 @@ import net.somewhatcity.boiler.core.BoilerPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
+import java.util.List;
 import java.util.logging.Level;
 
 import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
@@ -50,6 +51,7 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     private boolean renderPaused = false;
     private JsonObject settings = new JsonObject();
     private JsonObject sourceData = new JsonObject();
+    private List<Location> speakers = new ArrayList<>();
 
     public ImplBoilerDisplay(int id, Location cornerA, Location cornerB, BlockFace facing) {
         this.ID = id;
@@ -64,6 +66,7 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         this.g2 = this.image.createGraphics();
 
         this.renderTimer = new Timer();
+        this.settings.addProperty("buffering", true);
 
 
         save();
@@ -124,7 +127,9 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         }
 
         source.draw(drawingSpace);
+
         drawingSpace.flush();
+
     }
 
     @Override
@@ -147,23 +152,33 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     }
 
     @Override
-    public void onClick(Player player, int x, int y, boolean right) {
-        if(source != null) source.onClick(player, x, y, right);
+    public Set<Player> viewers() {
+        return drawingSpace.ctx().receivers();
     }
 
     @Override
-    public void onScroll(Player player, int x, int y, int delta) {
-        if(source != null) source.onScroll(player, x, y, delta);
+    public List<Location> speakers() {
+        return Collections.emptyList();
     }
 
     @Override
-    public void onInput(Player player, String string) {
-        if(source != null) source.onInput(player, string);
+    public void onClick(CommandSender sender, int x, int y, boolean right) {
+        if(source != null) source.onClick(sender, x, y, right);
     }
 
     @Override
-    public void onKey(Player player) {
+    public void onScroll(CommandSender sender, int x, int y, int delta) {
+        if(source != null) source.onScroll(sender, x, y, delta);
+    }
 
+    @Override
+    public void onInput(CommandSender sender, String string) {
+        if(source != null) source.onInput(sender, string);
+    }
+
+    @Override
+    public void onKey(CommandSender sender, String key) {
+        if(source != null) source.onKey(sender, key);
     }
 
     @Override

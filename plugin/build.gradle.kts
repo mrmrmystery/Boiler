@@ -41,6 +41,7 @@ tasks {
         relocate("kotlin", "net.somewhatcity.boiler.kotlin")
         dependencies {
             exclude(dependency("de.maxhenkel.voicechat:voicechat-api:2.4.11"))
+            //exclude(dependency("com.formdev:flatlaf:3.3"))
         }
     }
 

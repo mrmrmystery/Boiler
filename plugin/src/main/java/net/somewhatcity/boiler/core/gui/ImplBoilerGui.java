@@ -42,6 +42,7 @@ import org.checkerframework.checker.units.qual.A;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.HashSet;
@@ -175,21 +176,21 @@ public class ImplBoilerGui implements Listener {
     public void onGuiKey(GuiKeyEvent e) {
         if(!e.player().equals(player)) return;
 
-        Set<Key> pressed = new HashSet<>();
-        if(e.w()) pressed.add(Key.W);
-        if(e.a()) pressed.add(Key.A);
-        if(e.s()) pressed.add(Key.S);
-        if(e.d()) pressed.add(Key.D);
-        if(e.space()) pressed.add(Key.SPACE);
-        if(e.shift()) pressed.add(Key.SHIFT);
+        String key = "";
+        if(e.w()) key = "W";
+        else if(e.a()) key = "A";
+        else if(e.s()) key = "S";
+        else if(e.d()) key = "D";
+        else if(e.space()) key = "SPACE";
+        else if(e.shift()) key = "SHIFT";
 
-        if(pressed.contains(Key.SHIFT)) {
+        if(key.equals("SHIFT")) {
             exit();
             player.teleport(previousLocation);
             return;
         }
 
-        if(display.source() != null) display.source().onKey(player, pressed);
+        if(display.source() != null) display.source().onKey(player, key);
     }
 
     @EventHandler

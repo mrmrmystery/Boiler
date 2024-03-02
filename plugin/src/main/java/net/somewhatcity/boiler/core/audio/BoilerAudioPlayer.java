@@ -10,22 +10,86 @@
 
 package net.somewhatcity.boiler.core.audio;
 
+import de.maxhenkel.voicechat.api.Position;
+import de.maxhenkel.voicechat.api.ServerPlayer;
+import de.maxhenkel.voicechat.api.VoicechatConnection;
+import de.maxhenkel.voicechat.api.VoicechatServerApi;
+import de.maxhenkel.voicechat.api.audiochannel.AudioChannel;
+import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
+import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
+import de.maxhenkel.voicechat.api.opus.OpusEncoder;
+import de.maxhenkel.voicechat.api.packets.*;
+import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.core.BoilerConfig;
+import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import org.bukkit.Location;
+import org.bukkit.entity.Pig;
+import org.checkerframework.checker.units.qual.A;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
-public abstract class BoilerAudioPlayer {
+public class BoilerAudioPlayer {
 
-    private Location location;
-    private int range;
-    public BoilerAudioPlayer(Location location, int range) {
+    private static final VoicechatServerApi API = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
+    private AudioPlayer audioPlayer;
+    private long position = 0;
+    private Queue<Short> audioQueue;
+    public BoilerAudioPlayer(IBoilerDisplay display) {
+        audioQueue = new ArrayDeque<>();
 
+        LocationalAudioChannel channel = API.createLocationalAudioChannel(
+                UUID.randomUUID(),
+                API.fromServerLevel(display.cornerA().getWorld()),
+                API.createPosition(display.center().getX(), display.center().getY(), display.center().getZ())
+        );
+        audioPlayer = API.createAudioPlayer(channel, API.createEncoder(), new Supplier<short[]>() {
+            @Override
+            public short[] get() {
+                position += 20;
+                //System.out.println("aq-size: %s".formatted(audioQueue.size()));
+                short[] data = new short[960];
+                short lastData = 0;
+                for(int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
+                    data[i] = Short.MIN_VALUE;
+                    Object o = audioQueue.poll();
+                    if(o != null) {
+                        data[i] = (short) o;
+                    }
+                }
+                return data;
+            }
+        });
+        audioPlayer.startPlaying();
+
+        if(channel == null) {
+            return;
+        }
+        channel.setCategory(BoilerConfig.svcChannelName);
+        channel.setDistance(100);
     }
-    public abstract void queue(short data);
-    public abstract void play(String url);
-    public abstract void stop();
-    public abstract void pause();
-    public abstract void resume();
-    public abstract long position();
+    public void queue(short data) {
+        audioQueue.add(data);
+    };
 
+    public void queue(byte[] data) {
+        short[] audio = API.getAudioConverter().bytesToShorts(data);
+        for(short s : audio) {
+            queue(s);
+        }
+    }
+
+    public int getAudioQueueSize() {
+        return audioQueue.size();
+    }
+    public void stop() {
+        if(audioPlayer != null) audioPlayer.stopPlaying();
+    };
+
+    public long getPosition() {
+        return position;
+    }
 }

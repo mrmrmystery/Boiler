@@ -10,10 +10,7 @@
 
 package net.somewhatcity.boiler.core.display;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import de.pianoman911.mapengine.api.clientside.IMapDisplay;
 import net.somewhatcity.boiler.api.IDisplayManager;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
@@ -119,6 +116,15 @@ public class ImplDisplayManager implements IDisplayManager {
                 source.addProperty("name", display.sourceName());
                 source.add("data", display.sourceData());
                 obj.add("source", source);
+
+                JsonArray speakers = new JsonArray();
+                display.speakers().forEach(location -> {
+                    JsonObject loc = new JsonObject();
+                    loc.addProperty("world", location.getWorld().getName());
+                    loc.addProperty("x", location.getX());
+                    loc.addProperty("y", location.getY());
+                    loc.addProperty("z", location.getZ());
+                });
 
                 Files.writeString(displayFile.toPath(), gson.toJson(obj));
 

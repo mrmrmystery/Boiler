@@ -28,5 +28,4 @@ public class BoilerArguments {
                 BoilerPlugin.getPlugin().displayManager().displays().stream().map(IBoilerDisplay::id).map(String::valueOf).toArray(String[]::new)
         ));
     }
-
 }

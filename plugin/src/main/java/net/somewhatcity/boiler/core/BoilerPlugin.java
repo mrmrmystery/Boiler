@@ -34,6 +34,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+
 public class BoilerPlugin extends JavaPlugin {
 
     public static MapEngineApi MAP_ENGINE;
@@ -50,6 +51,11 @@ public class BoilerPlugin extends JavaPlugin {
     }
     @Override
     public void onEnable() {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(BoilerPlugin.class.getClassLoader());
+        //playwright = Playwright.create();
+        Thread.currentThread().setContextClassLoader(classLoader);
+
         new Metrics(this,18926);
 
         new BoilerConfig(this);
@@ -57,6 +63,8 @@ public class BoilerPlugin extends JavaPlugin {
         MAP_ENGINE = Bukkit.getServicesManager().getRegistration(MapEngineApi.class).getProvider();
 
         this.platform = PlatformUtil.getPlatform(this, this.getClassLoader(), new ImplListenerBridge());
+
+        //this.textureManager = new TextureManager();
 
         CommandAPI.onEnable();
 
@@ -69,12 +77,16 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager = new BoilerSourceManager(this);
         this.sourceManager.register("default", DefaultSource.class, false);
         this.sourceManager.register("error", ErrorSource.class, false);
+
         this.sourceManager.register("image", ImageSource.class);
         this.sourceManager.register("ffmpeg", FFMPEGSource.class);
+        this.sourceManager.register("ffmpeg-buffered", BufferedFFMPEGSource.class);
         this.sourceManager.register("twitch", TwitchSource.class);
         this.sourceManager.register("youtube", YoutubeSource.class);
-        this.sourceManager.register("rtmp", RTMPSource.class);
+        this.sourceManager.register("rtmp-server", RTMPSource.class);
         this.sourceManager.register("clone", CloneSource.class);
+        this.sourceManager.register("swing", SwingTest.class);
+        this.sourceManager.register("section-clone", SectionCloneSource.class);
 
         if(BoilerConfig.guiEnabled) guiManager = new ImplGuiManager(this);
 
@@ -101,11 +113,9 @@ public class BoilerPlugin extends JavaPlugin {
     public ISourceManager sourceManager() {
         return sourceManager;
     }
-
     public IGuiManager guiManager() {
         return guiManager;
     }
-
     public IPlatform<?> platform() {
         return platform;
     }

@@ -14,6 +14,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
+import dev.jorel.commandapi.arguments.IntegerArgument;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.GraphicUtils;
@@ -56,8 +57,8 @@ public class YoutubeSource implements IBoilerSource {
                     String url = json.get("url").getAsString();
                     JsonObject load = new JsonObject();
                     load.addProperty("url", url);
-                    load.addProperty("loop", false);
-                    display.source("ffmpeg", load);
+                    load.addProperty("buffer", 100);
+                    display.source("ffmpeg-buffered", load);
                 } else {
                     JsonObject err = new JsonObject();
                     err.addProperty("message", "Video unavailable");
@@ -89,6 +90,8 @@ public class YoutubeSource implements IBoilerSource {
     }
 
     public static java.util.List<Argument<?>> creationArguments() {
-        return List.of(new GreedyStringArgument("url"));
+        return List.of(
+                new GreedyStringArgument("url")
+        );
     }
 }

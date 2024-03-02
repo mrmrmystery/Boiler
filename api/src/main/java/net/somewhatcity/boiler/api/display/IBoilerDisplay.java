@@ -16,9 +16,12 @@ import de.pianoman911.mapengine.api.drawing.IDrawingSpace;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.awt.*;
+import java.util.List;
+import java.util.Set;
 
 public interface IBoilerDisplay {
 
@@ -53,10 +56,12 @@ public interface IBoilerDisplay {
     void render();
     byte[] provide20msAudio();
     void remove();
-    void onClick(Player player, int x, int y, boolean right);
-    void onScroll(Player player, int x, int y, int delta);
-    void onInput(Player player, String string);
-    void onKey(Player player);
+    Set<Player> viewers();
+    List<Location> speakers();
+    void onClick(CommandSender player, int x, int y, boolean right);
+    void onScroll(CommandSender player, int x, int y, int delta);
+    void onInput(CommandSender player, String string);
+    void onKey(CommandSender player, String key);
     void save();
 
 }

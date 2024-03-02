@@ -18,6 +18,8 @@ import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.commands.BoilerArguments;
 
+import java.util.Collections;
+
 public class DisplayActionCommand extends CommandAPICommand {
     public DisplayActionCommand() {
         super("action");
@@ -27,7 +29,7 @@ public class DisplayActionCommand extends CommandAPICommand {
                 .withArguments(new IntegerArgument("x"))
                 .withArguments(new IntegerArgument("y"))
                 .withOptionalArguments(new BooleanArgument("rightClick"))
-                .executesPlayer((sender, args) -> {
+                .executes((sender, args) -> {
                     IBoilerDisplay display = (IBoilerDisplay) args.get(0);
 
                     int x = (int) args.get(1);
@@ -41,13 +43,23 @@ public class DisplayActionCommand extends CommandAPICommand {
         );
         withSubcommand(new CommandAPICommand("input")
                 .withArguments(new GreedyStringArgument("string"))
-                .executesPlayer((sender, args) -> {
+                .executes((sender, args) -> {
                     IBoilerDisplay display = (IBoilerDisplay) args.get(0);
 
                     String input = (String) args.get(1);
 
                     display.onInput(sender, input);
                     Util.sendMsg(sender, "Executing input on display %s", display.id());
+                })
+        );
+        withSubcommand(new CommandAPICommand("key")
+                .withArguments(new GreedyStringArgument("key"))
+                .executes((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    String key = (String) args.get(1);
+
+                    display.onKey(sender, key);
+                    Util.sendMsg(sender, "Executing key on display %s", display.id());
                 })
         );
         executes((sender, args) -> {

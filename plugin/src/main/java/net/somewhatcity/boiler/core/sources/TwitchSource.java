@@ -75,81 +75,10 @@ public class TwitchSource implements IBoilerSource {
         try(Response response = client.newCall(request).execute()) {
             JsonObject obj = (JsonObject) JsonParser.parseString(response.body().string());
             String streamUrl = obj.getAsJsonObject("urls").get("480p").getAsString();
-
-            VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
-            LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(
-                    UUID.randomUUID(),
-                    serverApi.fromServerLevel(display.cornerA().getWorld()),
-                    serverApi.createPosition(display.center().getX(), display.center().getY(), display.center().getZ())
-            );
-
-            audioPlayer = serverApi.createAudioPlayer(channel, serverApi.createEncoder(), new Supplier<short[]>() {
-                @Override
-                public short[] get() {
-                    short[] data = new short[960];
-                    for(int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
-                        data[i] = audioQueue.poll();
-                    }
-                    return data;
-                }
-            });
-            audioPlayer.startPlaying();
-
-            if(channel == null) {
-                return;
-            }
-            channel.setCategory("boiler");
-            channel.setDistance(100);
-
-            EXECUTOR.execute(() -> {
-                try {
-                    FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(new URL(streamUrl));
-                    Java2DFrameConverter jconverter = new Java2DFrameConverter();
-                    grabber.start();
-
-                    SOURCE_FORMAT = new AudioFormat(grabber.getSampleRate(), 16, grabber.getAudioChannels(), true, true);
-                    int seq = 0;
-                    while (running) {
-                        try {
-                            long start = System.nanoTime();
-                            Frame frame = grabber.grabFrame();
-                            if(frame.samples != null) {
-                                ShortBuffer channelSamplesShortBuffer = (ShortBuffer) frame.samples[0];
-                                channelSamplesShortBuffer.rewind();
-                                ByteBuffer outBuffer = ByteBuffer.allocate(channelSamplesShortBuffer.capacity() * 2);
-                                for (int i = 0; i < channelSamplesShortBuffer.capacity(); i++) {
-                                    short val = channelSamplesShortBuffer.get(i);
-                                    outBuffer.putShort(val);
-                                }
-                                byte[] audioData = outBuffer.array();
-
-                                AudioInputStream source = new AudioInputStream(new ByteArrayInputStream(audioData), SOURCE_FORMAT, audioData.length);
-                                AudioInputStream converted = AudioSystem.getAudioInputStream(TARGET_FORMAT, source);
-                                short[] audio = serverApi.getAudioConverter().bytesToShorts(converted.readAllBytes());
-
-                                for(short s : audio) {
-                                    audioQueue.add(s);
-                                }
-                            }
-
-                            if(frame.image != null) {
-                                image = jconverter.getBufferedImage(frame);
-                                long offset = (long) ((1.0 / grabber.getFrameRate()) * 1000000000);
-                                long end = System.nanoTime();
-                                long sleep = offset - (end - start);
-                                if (sleep > 0) {
-                                    LockSupport.parkNanos(sleep);
-                                }
-                            }
-
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                } catch (MalformedURLException | FFmpegFrameGrabber.Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            JsonObject load = new JsonObject();
+            load.addProperty("url", streamUrl);
+            load.addProperty("buffer", 100);
+            display.source("ffmpeg-buffered", load);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

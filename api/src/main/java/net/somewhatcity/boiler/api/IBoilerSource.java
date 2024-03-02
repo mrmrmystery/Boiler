@@ -19,6 +19,7 @@ import dev.jorel.commandapi.arguments.Argument;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.GraphicUtils;
 import net.somewhatcity.boiler.api.util.Key;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.awt.*;
@@ -47,9 +48,9 @@ public interface IBoilerSource {
         return null;
     }
     default void onResize() {}
-    default void onClick(Player player, int x, int y, boolean right) {}
-    default void onScroll(Player player, int x, int y, int delta) {}
-    default void onKey(Player player, Set<Key> pressed) {}
-    default void onInput(Player player, String input) {}
-    default void onCursorMove(Player player, int x, int y) {}
+    default void onClick(CommandSender sender, int x, int y, boolean right) {}
+    default void onScroll(CommandSender sender, int x, int y, int delta) {}
+    default void onKey(CommandSender sender, String key) {}
+    default void onInput(CommandSender sender, String input) {}
+    default void onCursorMove(CommandSender sender, int x, int y) {}
 }

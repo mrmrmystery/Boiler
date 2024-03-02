@@ -93,13 +93,21 @@ public class RTMPSource implements IBoilerSource {
                 Java2DFrameConverter jconverter = new Java2DFrameConverter();
 
                 grabber.start();
+                int leftFrames = 0;
 
                 SOURCE_FORMAT = new AudioFormat(grabber.getSampleRate(), 16, grabber.getAudioChannels(), true, true);
                 while (running) {
                     try {
                         long start = System.nanoTime();
                         Frame frame = grabber.grabFrame();
-                        if (frame == null) break;
+                        if (frame == null) {
+                            leftFrames++;
+                            if(leftFrames > 100) {
+                                System.out.println("skipped over 100 frames. Stopping");
+                                break;
+                            }
+                            continue;
+                        }
                         if (frame.samples != null) {
                             ShortBuffer channelSamplesShortBuffer = (ShortBuffer) frame.samples[0];
                             channelSamplesShortBuffer.rewind();

@@ -11,17 +11,23 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
+import de.maxhenkel.voicechat.api.Group;
+import de.maxhenkel.voicechat.api.VoicechatConnection;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
 import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
+import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
 import de.pianoman911.mapengine.media.converter.MapEngineConverter;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.BooleanArgument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.core.BoilerConfig;
+import net.somewhatcity.boiler.core.audio.BoilerAudioPlayer;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.FFmpegLogCallback;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
 
@@ -51,63 +57,33 @@ public class FFMPEGSource implements IBoilerSource {
     private boolean running;
     private Queue<Short> audioQueue = new ArrayDeque<>();
     private AudioPlayer audioPlayer;
-    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
+    private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(12);
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
     private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
     private boolean loop = false;
+
+    private BoilerAudioPlayer bap;
+
+    private long lastAudio = 0;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         String streamUrl = data.get("url").getAsString();
         loop = data.get("loop").getAsBoolean();
-
-        VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
-        LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(
-                UUID.randomUUID(),
-                serverApi.fromServerLevel(display.cornerA().getWorld()),
-                serverApi.createPosition(display.center().getX(), display.center().getY(), display.center().getZ())
-        );
-
-        audioPlayer = serverApi.createAudioPlayer(channel, serverApi.createEncoder(), new Supplier<short[]>() {
-            @Override
-            public short[] get() {
-                short[] data = new short[960];
-                for(int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
-                    data[i] = 0;
-                    Object o = audioQueue.poll();
-                    if(o != null) data[i] = (short) o;
-                }
-                return data;
-            }
-        });
-        audioPlayer.startPlaying();
-
-        if(channel == null) {
-            return;
-        }
-        channel.setCategory("boiler");
-        channel.setDistance(100);
-
-        File file = new File(streamUrl);
-        if(!file.exists()) file = null;
+        bap = new BoilerAudioPlayer(display);
 
         running = true;
-        File finalFile = file;
         EXECUTOR.execute(() -> {
             try {
+
                 FFmpegFrameGrabber grabber;
-                if(finalFile == null) {
-                    grabber = new FFmpegFrameGrabber(new URL(streamUrl));
-                } else {
-                    grabber = new FFmpegFrameGrabber(finalFile);
-                }
+                grabber = new FFmpegFrameGrabber(streamUrl);
 
                 Java2DFrameConverter jconverter = new Java2DFrameConverter();
                 MapEngineConverter converter = new MapEngineConverter();
 
                 grabber.start();
 
-                long lastFrame = System.currentTimeMillis();
                 SOURCE_FORMAT = new AudioFormat(grabber.getSampleRate(), 16, grabber.getAudioChannels(), true, true);
                 while (running) {
                     try {
@@ -135,11 +111,8 @@ public class FFMPEGSource implements IBoilerSource {
 
                             AudioInputStream source = new AudioInputStream(new ByteArrayInputStream(audioData), SOURCE_FORMAT, audioData.length);
                             AudioInputStream converted = AudioSystem.getAudioInputStream(TARGET_FORMAT, source);
-                            short[] audio = serverApi.getAudioConverter().bytesToShorts(converted.readAllBytes());
 
-                            for(short s : audio) {
-                                audioQueue.add(s);
-                            }
+                            bap.queue(converted.readAllBytes());
                         }
 
                         if(frame.image != null) {
@@ -161,7 +134,7 @@ public class FFMPEGSource implements IBoilerSource {
                 JsonObject err = new JsonObject();
                 err.addProperty("message", "End of content");
                 display.source("error", err);
-            } catch (MalformedURLException | FFmpegFrameGrabber.Exception e) {
+            } catch (FFmpegFrameGrabber.Exception e) {
                 throw new RuntimeException(e);
             }
         });
@@ -171,8 +144,7 @@ public class FFMPEGSource implements IBoilerSource {
     public void unload() {
         running = false;
         if(audioPlayer != null) audioPlayer.stopPlaying();
-        audioQueue.clear();
-        //bap.stop();
+        bap.stop();
     }
 
     @Override

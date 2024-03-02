@@ -16,6 +16,8 @@ public class BoilerConfig {
     private BoilerPlugin plugin;
     public static int viewDistance = 100;
     public static boolean guiEnabled = false;
+    public static String svcChannelName = "boiler";
+    public static boolean useSvcGroups = false;
 
     public BoilerConfig(BoilerPlugin plugin) {
         this.plugin = plugin;
@@ -30,6 +32,7 @@ public class BoilerConfig {
 
         viewDistance = config.getInt("boiler.settings.view_distance", 100);
         guiEnabled = config.getBoolean("boiler.settings.gui_enabled", false);
+        svcChannelName = config.getString("boiler.settings.svc_channel_name", "boiler");
+        //useSvcGroups = config.getBoolean("boiler.settings.use_svc_groups", false);
     }
-
 }

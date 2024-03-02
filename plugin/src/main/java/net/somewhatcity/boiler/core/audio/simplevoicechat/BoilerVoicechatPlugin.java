@@ -16,6 +16,7 @@ import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.VolumeCategory;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
+import net.somewhatcity.boiler.core.BoilerConfig;
 
 public class BoilerVoicechatPlugin implements VoicechatPlugin {
 
@@ -34,9 +35,9 @@ public class BoilerVoicechatPlugin implements VoicechatPlugin {
         VoicechatServerApi api = event.getVoicechat();
 
         VolumeCategory boiler = api.volumeCategoryBuilder()
-                .setId("boiler")
-                .setName("Boiler")
-                .setDescription("The volume of boiler")
+                .setId(BoilerConfig.svcChannelName)
+                .setName(BoilerConfig.svcChannelName)
+                .setDescription("The volume of %s".formatted(BoilerConfig.svcChannelName))
                 .build();
 
         api.registerVolumeCategory(boiler);

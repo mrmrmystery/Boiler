@@ -27,7 +27,7 @@ public class ErrorSource implements IBoilerSource {
             error = "Error while loading error";
             return;
         }
-        error = data.get("message").getAsString();
+        if(data.get("message") != null) error = data.get("message").getAsString();
     }
 
     @Override
