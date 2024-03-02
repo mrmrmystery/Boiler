@@ -53,8 +53,6 @@ import java.util.function.Supplier;
 public class BufferedFFMPEGSource implements IBoilerSource {
     private boolean running;
     private Queue<Short> audioQueue = new ArrayDeque<>();
-    private AudioPlayer audioPlayer;
-    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
     private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);

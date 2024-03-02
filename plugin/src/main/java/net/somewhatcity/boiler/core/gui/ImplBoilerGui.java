@@ -10,7 +10,6 @@
 
 package net.somewhatcity.boiler.core.gui;
 
-import de.pianoman911.mapengine.api.clientside.IMapDisplay;
 import de.pianoman911.mapengine.api.pipeline.IPipelineContext;
 import de.pianoman911.mapengine.api.pipeline.IPipelineStream;
 import de.pianoman911.mapengine.api.util.FullSpacedColorBuffer;
@@ -19,7 +18,6 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.math.Rotations;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
-import net.somewhatcity.boiler.api.util.Key;
 import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.listener.GuiClickEvent;
@@ -34,21 +32,12 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.vehicle.VehicleExitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.BlockVector;
-import org.checkerframework.checker.units.qual.A;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-
-import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
 public class ImplBoilerGui implements Listener {
 
     private ItemStack[] previousInventory;
