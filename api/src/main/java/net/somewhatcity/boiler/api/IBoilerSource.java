@@ -17,6 +17,7 @@ import de.pianoman911.mapengine.api.drawing.IDrawingSpace;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.Argument;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.api.util.GraphicUtils;
 import net.somewhatcity.boiler.api.util.Key;
 import org.bukkit.command.CommandSender;
@@ -53,4 +54,7 @@ public interface IBoilerSource {
     default void onKey(CommandSender sender, String key) {}
     default void onInput(CommandSender sender, String input) {}
     default void onCursorMove(CommandSender sender, int x, int y) {}
+    default Map<String, CommandArgumentType> command() {
+        return Collections.emptyMap();
+    }
 }

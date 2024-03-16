@@ -13,6 +13,8 @@ package net.somewhatcity.boiler.core.commands.display;
 import com.google.gson.JsonObject;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.*;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
@@ -23,6 +25,7 @@ import net.somewhatcity.boiler.core.sources.hidden.DefaultSource;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,7 +39,53 @@ public class DisplaySourceCommand extends CommandAPICommand {
         BoilerPlugin.getPlugin().sourceManager().sources().forEach((name, source) -> {
             if(!BoilerPlugin.getPlugin().sourceManager().commandVisibleSourceNames().contains(name)) return;
 
+            List<Argument<?>> arguments = new ArrayList<>();
+
+            if(source.getAnnotation(CreateCommandArguments.class) != null) {
+                CreateArgument[] createArguments = source.getAnnotation(CreateCommandArguments.class).arguments();
+                for(CreateArgument createArgument : createArguments) {
+                    switch (createArgument.type()) {
+                        case DOUBLE -> {
+                            arguments.add(new DoubleArgument(createArgument.name()));
+                        }
+                        case STRING -> {
+                            arguments.add(new StringArgument(createArgument.name()));
+                        }
+                        case BOOLEAN -> {
+                            arguments.add(new BooleanArgument(createArgument.name()));
+                        }
+                        case INTEGER -> {
+                            arguments.add(new IntegerArgument(createArgument.name()));
+                        }
+                        case GREEDY_STRING -> {
+                            arguments.add(new GreedyStringArgument(createArgument.name()));
+                        }
+                    }
+                }
+            }
+
+            withSubcommand(new CommandAPICommand(name)
+                    .withArguments(arguments)
+                    .executes((sender, args) -> {
+                        IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                        JsonObject data = new JsonObject();
+
+                        List<Map.Entry<String, Object>> entries = args.argsMap().entrySet().stream().toList();
+                        for(int i = 1; i < entries.size(); i++) {
+                            Map.Entry<String, Object> entry = entries.get(i);
+                            data.addProperty(entry.getKey(), entry.getValue().toString());
+                        }
+
+                        display.source(name, data);
+                        Util.sendMsg(sender,"Setting source for display %s to %s", display.id(), name);
+                    })
+            );
+
+
+
+            /*
             try {
+
                 Method method = source.getMethod("creationArguments");
                 List<Argument<?>> Carguments = (List<Argument<?>>) method.invoke(null);
                 withSubcommand(new CommandAPICommand(name)
@@ -66,6 +115,8 @@ public class DisplaySourceCommand extends CommandAPICommand {
                         })
                 );
             }
+
+             */
         });
 
         executes(((sender, args) -> {

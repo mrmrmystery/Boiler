@@ -10,6 +10,7 @@
 
 package net.somewhatcity.boiler.core.sources;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
@@ -17,8 +18,11 @@ import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
 import de.pianoman911.mapengine.media.converter.MapEngineConverter;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -44,6 +48,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
+@CreateCommandArguments(arguments = {
+        @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
+})
 public class RTMPSource implements IBoilerSource {
 
     private boolean running;
@@ -57,6 +64,9 @@ public class RTMPSource implements IBoilerSource {
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         String streamUrl = data.get("url").getAsString();
+
+
+
 
         VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
         LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(
@@ -163,7 +173,4 @@ public class RTMPSource implements IBoilerSource {
         g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
     }
 
-    public static java.util.List<Argument<?>> creationArguments() {
-        return List.of(new GreedyStringArgument("url"));
-    }
 }

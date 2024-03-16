@@ -13,19 +13,28 @@ package net.somewhatcity.boiler.core.sources;
 import com.google.gson.JsonObject;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
+import java.util.UUID;
 
 public class SwingTest implements IBoilerSource {
 
     private JPanel panel = new JPanel();
     private JFileChooser fileChooser;
+    private Player player;
 
+    private Point lastClick;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
+        if(data.has("gui_player")) {
+            player = Bukkit.getPlayer(UUID.fromString(data.get("gui_player").getAsString()));
+        }
+
         Dimension dimension = new Dimension(display.width(), display.height());
 
         panel.setSize(dimension);
@@ -34,20 +43,20 @@ public class SwingTest implements IBoilerSource {
         panel.setPreferredSize(dimension);
         panel.setLayout(new FlowLayout());
 
+
+
         JButton button = new JButton("click me");
         button.addActionListener(e -> {
-            System.out.println("click");
+            player.sendMessage("click");
         });
         panel.add(button);
 
         JCheckBox checkbox = new JCheckBox();
         panel.add(checkbox);
 
-        String[] listData = new String[20];
-        Arrays.fill(listData, "HELLO");
-        JList<String> list = new JList<>(listData);
+        JTextField textField = new JTextField("kek");
+        panel.add(textField);
 
-        panel.add(list);
         //JScrollPane scrollPane = new JScrollPane(list);
         //panel.add(scrollPane);
 
@@ -84,6 +93,7 @@ public class SwingTest implements IBoilerSource {
     @Override
     public void onClick(CommandSender sender, int x, int y, boolean right) {
         Component clicked = panel.getComponentAt(x, y);
+        lastClick = new Point(x, y);
 
         if(clicked instanceof JButton button) {
             button.doClick(50);
@@ -91,6 +101,15 @@ public class SwingTest implements IBoilerSource {
             checkBox.doClick(50);
         } else if(clicked instanceof JRadioButton radioButton) {
             radioButton.doClick(50);
+        }
+    }
+
+    @Override
+    public void onInput(CommandSender sender, String input) {
+        Component selected = panel.getComponentAt(lastClick);
+
+        if(selected instanceof JTextField textField) {
+            textField.setText(input);
         }
     }
 }

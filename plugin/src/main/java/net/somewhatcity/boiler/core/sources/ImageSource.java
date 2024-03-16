@@ -11,25 +11,21 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
-import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
 
+@CreateCommandArguments(arguments = {
+        @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
+})
 public class ImageSource implements IBoilerSource {
 
     private BufferedImage image;
@@ -59,11 +55,5 @@ public class ImageSource implements IBoilerSource {
     public void draw(Graphics2D g2, Rectangle viewport) {
         g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
     }
-
-
-    public static List<Argument<?>> creationArguments() {
-        return List.of(new GreedyStringArgument("url"));
-    }
-
 
 }

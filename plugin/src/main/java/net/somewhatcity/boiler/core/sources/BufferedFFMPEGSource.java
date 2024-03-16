@@ -10,25 +10,19 @@
 
 package net.somewhatcity.boiler.core.sources;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import de.maxhenkel.voicechat.api.VoicechatServerApi;
-import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
-import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
-import de.pianoman911.mapengine.api.drawing.IDrawingSpace;
-import de.pianoman911.mapengine.api.util.FullSpacedColorBuffer;
-import de.pianoman911.mapengine.api.util.ImageUtils;
-import de.pianoman911.mapengine.media.converter.MapEngineConverter;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.BooleanArgument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.audio.BoilerAudioPlayer;
-import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
-import org.bytedeco.javacv.*;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.Java2DFrameConverter;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -36,20 +30,19 @@ import javax.sound.sampled.AudioSystem;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.locks.LockSupport;
-import java.util.function.Supplier;
 
+@CreateCommandArguments(arguments = {
+        @CreateArgument(name = "buffer", type = CommandArgumentType.INTEGER),
+        @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
+})
 public class BufferedFFMPEGSource implements IBoilerSource {
     private boolean running;
     private Queue<Short> audioQueue = new ArrayDeque<>();
@@ -75,6 +68,16 @@ public class BufferedFFMPEGSource implements IBoilerSource {
             try {
                 jconverter = new Java2DFrameConverter();
                 FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(streamUrl);
+
+                if(data.has("options")) {
+                    for(JsonElement opt : data.get("options").getAsJsonArray()) {
+                        grabber.setOption(
+                                opt.getAsJsonObject().get("key").getAsString(),
+                                opt.getAsJsonObject().get("value").getAsString()
+                        );
+                    }
+                }
+
                 grabber.start();
                 SOURCE_FORMAT = new AudioFormat(grabber.getSampleRate(), 16, grabber.getAudioChannels(), true, true);
 
@@ -208,11 +211,6 @@ public class BufferedFFMPEGSource implements IBoilerSource {
     public void draw(Graphics2D g2, Rectangle viewport) {
         g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
     }
-
-    public static java.util.List<Argument<?>> creationArguments() {
-        return List.of(new IntegerArgument("buffer"), new GreedyStringArgument("url"));
-    }
-
     private static class BoilerFrame {
         private BufferedImage image;
         private byte[] audio;

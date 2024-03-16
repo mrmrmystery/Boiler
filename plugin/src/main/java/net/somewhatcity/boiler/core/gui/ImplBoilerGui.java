@@ -10,14 +10,17 @@
 
 package net.somewhatcity.boiler.core.gui;
 
+import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.pipeline.IPipelineContext;
 import de.pianoman911.mapengine.api.pipeline.IPipelineStream;
 import de.pianoman911.mapengine.api.util.FullSpacedColorBuffer;
 import de.pianoman911.mapengine.api.util.ImageUtils;
+import de.pianoman911.mapengine.api.util.MapTraceResult;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.math.Rotations;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.display.IBoilerGui;
 import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.listener.GuiClickEvent;
@@ -32,79 +35,74 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-public class ImplBoilerGui implements Listener {
 
-    private ItemStack[] previousInventory;
-    private GameMode previousGameMode;
-    private Location previousLocation;
-    private IBoilerDisplay display;
-    private Point cursorPos = new Point(0, 0);
-    private int taskId;
-    private BufferedImage cursorImg;
-    private int[] cursor;
+import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
+
+public class ImplBoilerGui implements IBoilerGui {
+
+    private BoilerGuiListener guiListener;
     private Player player;
-
+    private int armorStandEntityId;
+    private IBoilerDisplay display;
+    private int bukkitTaskId;
+    private BufferedImage cursorImg;
+    private int[] cursorRgb;
     private ArmorStand armorStand;
-    private ArmorStand clickStand;
-    public ImplBoilerGui(BoilerPlugin plugin, Player player, String source) {
-        previousInventory = player.getInventory().getContents().clone();
-        previousGameMode = player.getGameMode();
-        previousLocation = player.getLocation().clone();
+    private Location prevLocation;
+    private boolean isClosed;
+    public ImplBoilerGui(Player player, int width, int height, String source, JsonObject data) {
         this.player = player;
 
-        World world = plugin.guiManager().world();
+        guiListener = new BoilerGuiListener(this);
 
-        Location pos = new Location(world, 0.5, -1.5, 0.5);
-        player.teleport(pos);
-        player.setInvisible(true);
-        //player.setGameMode(GameMode.SPECTATOR);
+        Location location = player.getLocation().clone();
+        prevLocation = location.clone();
+        location.setY(400.0);
+        player.teleport(location);
+        location = location.toCenterLocation();
 
-        armorStand = (ArmorStand) world.spawnEntity(pos, EntityType.ARMOR_STAND);
+        armorStandEntityId = Bukkit.getUnsafe().nextEntityId();
+
+        BoilerPlugin.getPlugin().platform().createArmorStandSpawnPacket(armorStandEntityId, location.clone().add(0, -1.75, 0)).send(player);
+        BoilerPlugin.getPlugin().platform().createSetCameraPacket(armorStandEntityId).send(player);
+        BoilerPlugin.getPlugin().platform().createSetPassengerPacket(armorStandEntityId, new int[]{player.getEntityId()}).send(player);
+
+        armorStand = (ArmorStand) location.getWorld().spawnEntity(location.clone().add(0, -1.75, 0), EntityType.ARMOR_STAND);
         armorStand.setBodyYaw(0);
         armorStand.setHeadRotations(Rotations.ZERO);
         armorStand.setCanTick(false);
-        armorStand.addPassenger(player);
         armorStand.setVisible(false);
-
-        clickStand = (ArmorStand) world.spawnEntity(pos, EntityType.ARMOR_STAND);
-        clickStand.setCanTick(false);
-        clickStand.setVisible(false);
-
-        plugin.platform().createSetCameraPacket(armorStand).send(player);
-
-        try {
-            cursorImg = ImageIO.read(ImplBoilerGui.class.getResourceAsStream("/assets/boiler_cursor.png"));
-            cursor = ImageUtils.rgb(cursorImg);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
+        armorStand.addScoreboardTag("boilerInteractionBlocker");
 
         display = BoilerPlugin.getPlugin().displayManager().createDisplay(
-                new Location(world, -4, -2, 2),
-                new Location(world, 4, 2, 2),
+                location.clone().add(-width, -height, 2),
+                location.clone().add(width, height, 2),
                 BlockFace.NORTH,
                 false,
                 false
         );
-        display.source(source, null);
-        display.tick(player);
 
-        Bukkit.getPluginManager().registerEvents(this, BoilerPlugin.getPlugin());
+        if(data == null) data = new JsonObject();
+        data.addProperty("gui_player", player.getUniqueId().toString());
 
-        taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(BoilerPlugin.getPlugin(), () -> {
-            if(!player.isOnline() || !player.getLocation().getWorld().equals(world)) {
+        display.source(source, data);
 
-            }
+        try {
+            cursorImg = ImageIO.read(ImplBoilerGui.class.getResourceAsStream("/assets/boiler_cursor.png"));
+            cursorRgb = ImageUtils.rgb(cursorImg);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-            plugin.platform().createSetCameraPacket(armorStand).send(player);
-
+        bukkitTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(BoilerPlugin.getPlugin(), () -> {
             if(display.mapDisplay() == null) return;
 
             double yaw = player.getLocation().getYaw();
@@ -112,80 +110,135 @@ public class ImplBoilerGui implements Listener {
 
             if(yaw > 90) {
                 yaw = 90;
-                Location location = player.getLocation();
-                location.setYaw(90);
-                //player.teleport(location);
+                Location loc = player.getLocation();
+                loc.setYaw(90);
+                player.teleport(loc);
             } else if(yaw < -90) {
                 yaw = -90;
-                Location location = player.getLocation();
-                location.setYaw(-90);
-                //player.teleport(location);
+                Location loc = player.getLocation();
+                loc.setYaw(-90);
+                player.teleport(loc);
             }
 
-
-            cursorPos.x  = (int) Util.map((float) yaw, -90, 90, 0, display.width());
-            cursorPos.y  = (int) Util.map((float) pitch, -90, 90, 0, display.height());
-
+            guiListener.cursorPos.x  = (int) Util.map((float) yaw, -90, 90, 0, display.width());
+            guiListener.cursorPos.y  = (int) Util.map((float) pitch, -90, 90, 0, display.height());
+            display.tick(player);
         }, 0, 1);
 
         display.mapDisplay().pipeline().addStream(new IPipelineStream() {
             @Override
             public FullSpacedColorBuffer compute(FullSpacedColorBuffer buffer, IPipelineContext ctx) {
-                buffer.pixels(cursor, cursorPos.x, cursorPos.y, cursorImg.getWidth(), cursorImg.getHeight());
+                buffer.pixels(cursorRgb, guiListener.cursorPos.x, guiListener.cursorPos.y, cursorImg.getWidth(), cursorImg.getHeight());
                 return buffer;
             }
         });
-
-        //display.source(source, new String[]{});
-
-        //plugin.platform().createArmorStandSpawnPacket(Bukkit.getUnsafe().nextEntityId(), newWorld);
     }
 
     public void exit() {
-        armorStand.removePassenger(player);
+        if(isClosed) return;
+        isClosed = true;
+        BoilerPlugin.getPlugin().platform().createSetCameraPacket(player.getEntityId()).send(player);
+        BoilerPlugin.getPlugin().platform().createRemoveEntityPacket(new int[]{armorStandEntityId}).send(player);
         player.setInvisible(false);
-        BoilerPlugin.getPlugin().platform().createSetCameraPacket(player).send(player);
         display.remove();
         armorStand.remove();
-        clickStand.remove();
-        Bukkit.getScheduler().cancelTask(taskId);
-        GuiClickEvent.getHandlerList().unregister(this);
-        GuiKeyEvent.getHandlerList().unregister(this);
-        AsyncChatEvent.getHandlerList().unregister(this);
+        player.teleport(prevLocation);
+
+        Bukkit.getScheduler().cancelTask(bukkitTaskId);
+        BoilerPlugin.getPlugin().guiManager().close(this);
     }
 
-
-    @EventHandler
-    public void onGuiClick(GuiClickEvent e) {
-        if(!e.player().equals(player)) return;
-        if(display.source() != null) display.source().onClick(player, cursorPos.x, cursorPos.y, e.isRightClick());
+    @Override
+    public IBoilerDisplay display() {
+        return display;
     }
 
-    @EventHandler
-    public void onGuiKey(GuiKeyEvent e) {
-        if(!e.player().equals(player)) return;
+    @Override
+    public Player player() {
+        return player;
+    }
 
-        String key = "";
-        if(e.w()) key = "W";
-        else if(e.a()) key = "A";
-        else if(e.s()) key = "S";
-        else if(e.d()) key = "D";
-        else if(e.space()) key = "SPACE";
-        else if(e.shift()) key = "SHIFT";
+    private static class BoilerGuiListener implements Listener {
+        private IBoilerGui gui;
+        private Point cursorPos = new Point(0, 0);
+        private long lastClick;
+        public BoilerGuiListener(IBoilerGui gui) {
+            this.gui = gui;
+            Bukkit.getPluginManager().registerEvents(this, BoilerPlugin.getPlugin());
+        }
+        @EventHandler
+        public void onGuiClick(GuiClickEvent e) {
+            if(!e.player().equals(gui.player())) return;
+            if(lastClick > System.currentTimeMillis() - 100) return;
+            lastClick = System.currentTimeMillis();
+            if(gui.display().source() != null) gui.display().source().onClick(gui.player(), cursorPos.x, cursorPos.y, e.isRightClick());
+        }
+        @EventHandler
+        public void onGuiKey(GuiKeyEvent e) {
+            if(!e.player().equals(gui.player())) return;
 
-        if(key.equals("SHIFT")) {
-            exit();
-            player.teleport(previousLocation);
-            return;
+            String key = "";
+            if(e.w()) key = "W";
+            else if(e.a()) key = "A";
+            else if(e.s()) key = "S";
+            else if(e.d()) key = "D";
+            else if(e.space()) key = "SPACE";
+            else if(e.shift()) key = "SHIFT";
+
+            if(key.equals("SHIFT")) {
+                gui.exit();
+                return;
+            }
+
+            if(key.isEmpty()) return;
+            if(gui.display().source() != null) gui.display().source().onKey(gui.player(), key);
         }
 
-        if(display.source() != null) display.source().onKey(player, key);
+        @EventHandler
+        public void onChat(AsyncChatEvent e) {
+            if(!e.getPlayer().equals(gui.player())) return;
+            e.setCancelled(true);
+            String input = MiniMessage.miniMessage().serialize(e.message());
+            if(gui.display().source() != null) gui.display().source().onInput(e.getPlayer(), input);
+        }
+
+        @EventHandler
+        public void onGuiScroll(PlayerItemHeldEvent e) {
+            int b = e.getPreviousSlot();
+            int n = e.getNewSlot();
+
+            int delta = 0;
+
+            if(b == 8 && n == 0){
+                delta = 1;
+            }else if(b == 0 && n == 8){
+                delta = -1;
+            }else if(b < n){
+                delta = 1;
+            }else if(n < b){
+                delta = -1;
+            }
+
+            gui.display().onScroll(e.getPlayer(), cursorPos.x, cursorPos.y, delta);
+        }
+
+        @EventHandler
+        public void onQuit(PlayerQuitEvent e) {
+            gui.exit();
+        }
+
+        public void register() {
+            Bukkit.getPluginManager().registerEvents(this, BoilerPlugin.getPlugin());
+        }
+
+        public void unregister() {
+            GuiClickEvent.getHandlerList().unregister(this);
+            GuiKeyEvent.getHandlerList().unregister(this);
+            AsyncChatEvent.getHandlerList().unregister(this);
+            PlayerItemHeldEvent.getHandlerList().unregister(this);
+            PlayerQuitEvent.getHandlerList().unregister(this);
+        }
     }
 
-    @EventHandler
-    public void onChat(AsyncChatEvent e) {
-        if(!e.getPlayer().equals(player)) return;
-        String input = MiniMessage.miniMessage().serialize(e.message());
-        if(display.source() != null) display.source().onInput(e.getPlayer(), input);
-    }
+
 }

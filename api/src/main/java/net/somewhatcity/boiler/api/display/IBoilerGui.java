@@ -10,5 +10,11 @@
 
 package net.somewhatcity.boiler.api.display;
 
-public class IBoilerGui {
+import org.bukkit.entity.Player;
+
+public interface IBoilerGui {
+    public void exit();
+    public IBoilerDisplay display();
+    public Player player();
+
 }

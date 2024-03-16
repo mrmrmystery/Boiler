@@ -18,8 +18,11 @@ import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
 import de.pianoman911.mapengine.media.converter.MapEngineConverter;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -50,6 +53,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
+@CreateCommandArguments(arguments = {
+        @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
+})
 public class TwitchSource implements IBoilerSource {
     private boolean running;
     private Queue<Short> audioQueue = new ArrayDeque<>();
@@ -94,7 +100,4 @@ public class TwitchSource implements IBoilerSource {
         g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
     }
 
-    public static java.util.List<Argument<?>> creationArguments() {
-        return List.of(new GreedyStringArgument("url"));
-    }
 }

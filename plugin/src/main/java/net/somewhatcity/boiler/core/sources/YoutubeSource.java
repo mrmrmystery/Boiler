@@ -15,8 +15,11 @@ import com.google.gson.JsonParser;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import dev.jorel.commandapi.arguments.IntegerArgument;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.api.util.GraphicUtils;
 import net.somewhatcity.boiler.core.Util;
 import okhttp3.*;
@@ -28,6 +31,9 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+@CreateCommandArguments(arguments = {
+        @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
+})
 public class YoutubeSource implements IBoilerSource {
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
@@ -80,18 +86,11 @@ public class YoutubeSource implements IBoilerSource {
     public void unload() {
 
     }
-
     @Override
     public void draw(Graphics2D g2, Rectangle viewport) {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, viewport.width, viewport.height);
         g2.setColor(Color.WHITE);
         GraphicUtils.centeredString(g2, viewport, "Loading video...");
-    }
-
-    public static java.util.List<Argument<?>> creationArguments() {
-        return List.of(
-                new GreedyStringArgument("url")
-        );
     }
 }

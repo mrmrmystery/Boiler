@@ -87,6 +87,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("clone", CloneSource.class);
         this.sourceManager.register("swing", SwingTest.class);
         this.sourceManager.register("section-clone", SectionCloneSource.class);
+        this.sourceManager.register("keyboard", KeyboardSource.class);
 
         if(BoilerConfig.guiEnabled) guiManager = new ImplGuiManager(this);
 

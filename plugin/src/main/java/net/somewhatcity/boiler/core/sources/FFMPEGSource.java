@@ -21,8 +21,11 @@ import de.pianoman911.mapengine.media.converter.MapEngineConverter;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.BooleanArgument;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
+import net.somewhatcity.boiler.api.CreateArgument;
+import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.BoilerConfig;
 import net.somewhatcity.boiler.core.audio.BoilerAudioPlayer;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
@@ -52,6 +55,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
+@CreateCommandArguments(arguments = {
+        @CreateArgument(name = "loop", type = CommandArgumentType.BOOLEAN),
+        @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
+})
 public class FFMPEGSource implements IBoilerSource {
 
     private boolean running;
@@ -152,7 +159,4 @@ public class FFMPEGSource implements IBoilerSource {
         g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
     }
 
-    public static java.util.List<Argument<?>> creationArguments() {
-        return List.of(new BooleanArgument("loop"), new GreedyStringArgument("url"));
-    }
 }

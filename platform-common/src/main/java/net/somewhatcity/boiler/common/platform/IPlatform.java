@@ -21,8 +21,9 @@ public interface IPlatform<T> {
     void sendPacket(Player player, PacketContainer<T> packet);
     void flush(Player player);
     PacketContainer<T> createArmorStandSpawnPacket(int entityId, Location loc);
-    PacketContainer<T> createSetCameraPacket(Entity entity);
-    PacketContainer<T> createPlayerMountPacket();
+    PacketContainer<T> createSetCameraPacket(int entityId);
+    PacketContainer<T> createRemoveEntityPacket(int[] entities);
+    PacketContainer<T> createSetPassengerPacket(int vehicleEntityId, int[] passengerEntityIds);
 
 
 }

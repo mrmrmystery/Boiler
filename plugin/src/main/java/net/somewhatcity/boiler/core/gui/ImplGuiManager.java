@@ -10,6 +10,9 @@
 
 package net.somewhatcity.boiler.core.gui;
 
+import com.google.gson.JsonObject;
+import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.display.IBoilerGui;
 import net.somewhatcity.boiler.api.display.IGuiManager;
 import net.somewhatcity.boiler.core.BoilerPlugin;
 import org.bukkit.Bukkit;
@@ -21,45 +24,36 @@ import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Random;
+import java.util.*;
 
 public class ImplGuiManager implements IGuiManager {
 
     private final BoilerPlugin plugin;
-    private World world;
+    private List<IBoilerGui> activeGuis;
+
     public ImplGuiManager(BoilerPlugin plugin) {
         this.plugin = plugin;
-
-        world = Bukkit.getWorld("boilerui");
-        if(world != null) return;
-
-        WorldCreator creator = new WorldCreator("world_boilerui");
-        creator.environment(World.Environment.NORMAL);
-        creator.generator(new ChunkGenerator() {
-            @Override
-            public void generateNoise(@NotNull WorldInfo worldInfo, @NotNull Random random, int chunkX, int chunkZ, @NotNull ChunkData chunkData) {
-                for(int y = chunkData.getMinHeight(); y < 65 && y < chunkData.getMaxHeight(); y++) {
-                    for(int x = 0; x < 16; x++) {
-                        for(int z = 0; z < 16; z++) {
-                            chunkData.setBlock(x, 65, z, Material.AIR);
-                        }
-                    }
-                }
-            }
-        });
-
-        creator.generateStructures(false);
-        world = Bukkit.createWorld(creator);
-
+        activeGuis = new ArrayList<>();
     }
 
+    public void removeGui(IBoilerGui gui) {
+        activeGuis.remove(gui);
+    }
 
     @Override
-    public void open(Player player, String source) {
-        new ImplBoilerGui(plugin, player, source);
+    public void open(Player player, int width, int height, String source, JsonObject data) {
+        IBoilerGui gui = new ImplBoilerGui(player, width, height, source, data);
+        activeGuis.add(gui);
     }
 
-    public World world() {
-        return world;
+    @Override
+    public void close(IBoilerGui gui) {
+        gui.exit();
+        activeGuis.remove(gui);
+    }
+
+    @Override
+    public List<IBoilerGui> activeGuis() {
+        return Collections.unmodifiableList(activeGuis);
     }
 }

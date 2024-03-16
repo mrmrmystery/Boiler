@@ -10,11 +10,11 @@
 
 package net.somewhatcity.boiler.common;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.SharedConstants;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
-import net.minecraft.network.protocol.game.ClientboundSetCameraPacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
@@ -87,12 +87,22 @@ public class Paper1202Platform implements IPlatform<Packet<ClientGamePacketListe
     }
 
     @Override
-    public PacketContainer<Packet<ClientGamePacketListener>> createSetCameraPacket(Entity entity) {
-        return PacketContainer.wrap(this, new ClientboundSetCameraPacket(((CraftEntity) entity).getHandle()));
+    public PacketContainer<Packet<ClientGamePacketListener>> createSetCameraPacket(int entityId) {
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        buf.writeVarInt(entityId);
+        return PacketContainer.wrap(this, new ClientboundSetCameraPacket(buf));
     }
 
     @Override
-    public PacketContainer<Packet<ClientGamePacketListener>> createPlayerMountPacket() {
-        return null;
+    public PacketContainer<Packet<ClientGamePacketListener>> createRemoveEntityPacket(int[] entities) {
+        return PacketContainer.wrap(this, new ClientboundRemoveEntitiesPacket(entities));
+    }
+
+    @Override
+    public PacketContainer<Packet<ClientGamePacketListener>> createSetPassengerPacket(int vehicleEntityId, int[] passengerEntityIds) {
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        buf.writeVarInt(vehicleEntityId);
+        buf.writeVarIntArray(passengerEntityIds);
+        return PacketContainer.wrap(this, new ClientboundSetPassengersPacket(buf));
     }
 }
