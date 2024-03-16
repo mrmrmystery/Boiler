@@ -13,7 +13,7 @@ allprojects {
     apply(plugin = "maven-publish")
 
     group = "net.somewhatcity"
-    version = "2.0.5"
+    version = "2.0.6"
 
     repositories {
         maven("https://repo.papermc.io/repository/maven-public/")
