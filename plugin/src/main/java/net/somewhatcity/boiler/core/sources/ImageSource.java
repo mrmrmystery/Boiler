@@ -20,6 +20,7 @@ import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 
@@ -40,7 +41,20 @@ public class ImageSource implements IBoilerSource {
         }
 
         try {
-            image = ImageIO.read(new URL(data.get("url").getAsString()));
+            String url = data.get("url").getAsString();
+            if(url.startsWith("file:")) {
+                url = url.substring(5);
+                File imageFile = new File(url);
+                if(imageFile.exists() && imageFile.isFile()) {
+                    image = ImageIO.read(imageFile);
+                } else {
+                    obj.addProperty("message", "File not found");
+                    display.source("error", obj);
+                    return;
+                }
+            } else {
+                image = ImageIO.read(new URL(url));
+            }
         } catch (IOException e) {
             display.source("error", obj);
         }

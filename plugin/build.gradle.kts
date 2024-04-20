@@ -48,7 +48,6 @@ tasks {
     assemble {
         dependsOn(shadowJar)
     }
-
 }
 
 bukkit {

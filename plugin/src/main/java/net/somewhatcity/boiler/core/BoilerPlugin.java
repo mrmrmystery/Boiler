@@ -23,6 +23,7 @@ import net.somewhatcity.boiler.core.audio.AudioManager;
 import net.somewhatcity.boiler.core.commands.BoilerCommand;
 import net.somewhatcity.boiler.core.display.BoilerSourceManager;
 import net.somewhatcity.boiler.core.display.ImplDisplayManager;
+import net.somewhatcity.boiler.core.display.UpdateIntervalManager;
 import net.somewhatcity.boiler.core.gui.ImplGuiManager;
 import net.somewhatcity.boiler.core.listener.BoilerListener;
 import net.somewhatcity.boiler.core.platform.ImplListenerBridge;
@@ -44,6 +45,7 @@ public class BoilerPlugin extends JavaPlugin {
     private IDisplayManager displayManager;
     private ISourceManager sourceManager;
     private IGuiManager guiManager;
+    private UpdateIntervalManager intervalManager;
     @Override
     public void onLoad() {
         plugin = this;
@@ -68,6 +70,8 @@ public class BoilerPlugin extends JavaPlugin {
 
         CommandAPI.onEnable();
 
+        intervalManager = new UpdateIntervalManager(this);
+
         if(Bukkit.getPluginManager().getPlugin("voicechat") != null) {
             AudioManager.loadSimpleVoiceChat();
         }
@@ -89,7 +93,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("section-clone", SectionCloneSource.class);
         this.sourceManager.register("keyboard", KeyboardSource.class);
 
-        if(BoilerConfig.guiEnabled) guiManager = new ImplGuiManager(this);
+        guiManager = new ImplGuiManager(this);
 
         this.api = new ImplBoilerApi(this);
         Bukkit.getServicesManager().register(BoilerApi.class, api, this, ServicePriority.Normal);
@@ -107,7 +111,6 @@ public class BoilerPlugin extends JavaPlugin {
     public void onDisable() {
         CommandAPI.onDisable();
     }
-
     public IDisplayManager displayManager() {
         return displayManager;
     }
@@ -119,6 +122,9 @@ public class BoilerPlugin extends JavaPlugin {
     }
     public IPlatform<?> platform() {
         return platform;
+    }
+    public UpdateIntervalManager intervalManager() {
+        return intervalManager;
     }
     public static BoilerPlugin getPlugin() {
         return plugin;

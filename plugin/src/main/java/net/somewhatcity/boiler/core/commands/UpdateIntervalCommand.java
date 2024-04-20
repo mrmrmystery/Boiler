@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023.
+ * Copyright (c) 2024.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
@@ -11,14 +11,18 @@
 package net.somewhatcity.boiler.core.commands;
 
 import dev.jorel.commandapi.CommandAPICommand;
+import dev.jorel.commandapi.arguments.IntegerArgument;
+import net.somewhatcity.boiler.core.BoilerPlugin;
+import net.somewhatcity.boiler.core.Util;
 
-public class BoilerCommand extends CommandAPICommand {
-    public BoilerCommand() {
-        super("boiler");
-        withSubcommand(new HelpCommand());
-        withSubcommand(new DisplayCommand());
-        withSubcommand(new GuiCommand());
-        withSubcommand(new UpdateIntervalCommand());
-        register();
+public class UpdateIntervalCommand extends CommandAPICommand {
+    public UpdateIntervalCommand() {
+        super("updateInterval");
+        withArguments(new IntegerArgument("ms"));
+        executesPlayer((player, args) -> {
+            int interval = (int) args.get(0);
+            BoilerPlugin.getPlugin().intervalManager().setInterval(player, interval);
+            Util.sendMsg(player,"Set update interval to %sms", interval);
+        });
     }
 }

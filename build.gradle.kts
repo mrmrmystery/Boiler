@@ -2,7 +2,7 @@ plugins {
     id("java-library")
     id("maven-publish")
 
-    id("io.papermc.paperweight.userdev") version "1.5.5" apply false
+    id("io.papermc.paperweight.userdev") version "1.5.12" apply false
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
@@ -13,7 +13,7 @@ allprojects {
     apply(plugin = "maven-publish")
 
     group = "net.somewhatcity"
-    version = "2.0.6"
+    version = "2.0.7"
 
     repositories {
         maven("https://repo.papermc.io/repository/maven-public/")
@@ -40,6 +40,11 @@ subprojects {
         }
         repositories {
             mavenLocal()
+        }
+        repositories.maven("https://repo.somewhatcity.net/releases") {
+            name = "somewhatcity"
+            authentication { create<BasicAuthentication>("basic") }
+            credentials(PasswordCredentials::class)
         }
     }
 }

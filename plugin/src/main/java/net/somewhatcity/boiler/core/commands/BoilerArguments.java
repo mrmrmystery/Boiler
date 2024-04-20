@@ -10,10 +10,17 @@
 
 package net.somewhatcity.boiler.core.commands;
 
+import de.pianoman911.mapengine.api.util.MapTraceResult;
 import dev.jorel.commandapi.arguments.*;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
+import org.bukkit.entity.Player;
+
+import java.util.Arrays;
+import java.util.List;
+
+import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
 
 public class BoilerArguments {
     public static Argument<IBoilerDisplay> displayArgument(String nodeName) {
@@ -24,8 +31,8 @@ public class BoilerArguments {
             } else {
                 return display;
             }
-        }).replaceSuggestions(ArgumentSuggestions.strings(info ->
-                BoilerPlugin.getPlugin().displayManager().displays().stream().map(IBoilerDisplay::id).map(String::valueOf).toArray(String[]::new)
-        ));
+        }).replaceSuggestions(ArgumentSuggestions.strings(info -> {
+            return BoilerPlugin.getPlugin().displayManager().displays().stream().map(IBoilerDisplay::id).map(String::valueOf).toArray(String[]::new);
+        }));
     }
 }

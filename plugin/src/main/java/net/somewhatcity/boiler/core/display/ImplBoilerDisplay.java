@@ -52,6 +52,8 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     private JsonObject settings = new JsonObject();
     private JsonObject sourceData = new JsonObject();
     private List<Location> speakers = new ArrayList<>();
+    private HashMap<UUID, Long> lastUpdates = new HashMap<>();
+    private final Set<Player> receivers = new HashSet<>();
 
     public ImplBoilerDisplay(int id, Location cornerA, Location cornerB, BlockFace facing) {
         this.ID = id;
@@ -68,22 +70,22 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         this.renderTimer = new Timer();
         this.settings.addProperty("buffering", true);
 
-
         save();
     }
     @Override
     public void tick(Player player) {
-
         if(CORNER_A.getWorld().equals(player.getWorld()) && CORNER_A.distance(player.getLocation()) < BoilerConfig.viewDistance) {
-            if(!drawingSpace.ctx().isReceiver(player)) {
-                drawingSpace.ctx().addReceiver(player);
+            if(!receivers.contains(player)) {
+                receivers.add(player);
                 MAP_DISPLAY.spawn(player);
             }
         }else {
-            drawingSpace.ctx().receivers().remove(player);
-            MAP_DISPLAY.despawn(player);
+            if(receivers.contains(player)) {
+                receivers.remove(player);
+                MAP_DISPLAY.despawn(player);
+            }
         }
-        if(!player.isOnline()) drawingSpace.ctx().removeReceiver(player);
+        if(!player.isOnline()) receivers.remove(player);
     }
 
     @Override
@@ -119,17 +121,34 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     @Override
     public void render() {
         if(renderPaused) return;
-        if(drawingSpace.ctx().receivers().isEmpty()) return;
+        if(receivers.isEmpty()) return;
 
         if(source == null) {
             source("default", null);
             return;
         }
 
-        source.draw(drawingSpace);
+        Set<Player> actualReceivers = new HashSet<>(receivers);
+        Set<Player> toRemove = new HashSet<>();
 
+        actualReceivers.forEach(player -> {
+            int interval = BoilerPlugin.getPlugin().intervalManager().getInterval(player);
+            if(interval > 0 && lastUpdates.containsKey(player.getUniqueId())) {
+                long lastUpdate = lastUpdates.get(player.getUniqueId());
+                if(lastUpdate + interval > System.currentTimeMillis()) {
+                    toRemove.add(player);
+                }
+            }
+        });
+        actualReceivers.removeAll(toRemove);
+
+        drawingSpace.ctx().receivers(actualReceivers);
+        source.draw(drawingSpace);
         drawingSpace.flush();
 
+        actualReceivers.forEach(player -> {
+            lastUpdates.put(player.getUniqueId(), System.currentTimeMillis());
+        });
     }
 
     @Override
