@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @CreateCommandArguments(arguments = {
+        @CreateArgument(name = "quality", type = CommandArgumentType.STRING),
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
 public class YoutubeSource implements IBoilerSource {
@@ -41,9 +42,12 @@ public class YoutubeSource implements IBoilerSource {
 
         try {
             URI uri = new URI(data.get("url").getAsString());
+            String vQuality = data.get("quality").getAsString();
 
             JsonObject send = new JsonObject();
             send.addProperty("url", uri.toString());
+            //send.addProperty("vCodec", "h264");
+            send.addProperty("vQuality", vQuality);
 
             RequestBody body = RequestBody.create(send.toString().getBytes(StandardCharsets.UTF_8));
 
@@ -64,6 +68,7 @@ public class YoutubeSource implements IBoilerSource {
                     JsonObject load = new JsonObject();
                     load.addProperty("url", url);
                     load.addProperty("buffer", 100);
+                    load.addProperty("keepLastSourceData", true);
                     display.source("ffmpeg-buffered", load);
                 } else {
                     JsonObject err = new JsonObject();

@@ -16,12 +16,12 @@ repositories {
 }
 
 dependencies {
-    implementation("org.projectlombok:lombok:1.18.28")
     runtimeOnly(project(":platform-paper-1.20"))
     runtimeOnly(project(":platform-paper-1.20.2"))
     runtimeOnly(project(":platform-paper-1.20.3"))
+    runtimeOnly(project(":platform-paper-1.20.5"))
 
-    implementation("dev.jorel:commandapi-bukkit-shade:9.3.0")
+    implementation("dev.jorel:commandapi-bukkit-shade:9.4.2")
     implementation("de.maxhenkel.voicechat:voicechat-api:2.4.11")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
 

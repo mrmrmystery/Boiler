@@ -35,9 +35,17 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bytedeco.javacv.FFmpegLogCallback;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
+import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_PANIC;
+import static org.bytedeco.ffmpeg.global.avutil.av_log_set_level;
 
 public class BoilerPlugin extends JavaPlugin {
 
+    public static final Executor EXECUTOR = Executors.newFixedThreadPool(1);
     public static MapEngineApi MAP_ENGINE;
     private static BoilerPlugin plugin;
     private IPlatform<?> platform;
@@ -57,6 +65,8 @@ public class BoilerPlugin extends JavaPlugin {
         Thread.currentThread().setContextClassLoader(BoilerPlugin.class.getClassLoader());
         //playwright = Playwright.create();
         Thread.currentThread().setContextClassLoader(classLoader);
+
+        av_log_set_level(AV_LOG_PANIC);
 
         new Metrics(this,18926);
 

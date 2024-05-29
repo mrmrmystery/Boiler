@@ -1,5 +1,5 @@
 plugins {
-    id("io.freefair.lombok") version "8.3"
+    id("io.freefair.lombok") version "8.6"
 }
 
 dependencies {

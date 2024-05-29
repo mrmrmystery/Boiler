@@ -38,10 +38,11 @@ public class BoilerAudioPlayer {
     private AudioPlayer audioPlayer;
     private long position = 0;
     private Queue<Short> audioQueue;
+    private LocationalAudioChannel channel;
     public BoilerAudioPlayer(IBoilerDisplay display) {
         audioQueue = new ArrayDeque<>();
 
-        LocationalAudioChannel channel = API.createLocationalAudioChannel(
+        channel = API.createLocationalAudioChannel(
                 UUID.randomUUID(),
                 API.fromServerLevel(display.cornerA().getWorld()),
                 API.createPosition(display.center().getX(), display.center().getY(), display.center().getZ())
@@ -69,7 +70,13 @@ public class BoilerAudioPlayer {
             return;
         }
         channel.setCategory(BoilerConfig.svcChannelName);
-        channel.setDistance(100);
+
+
+        if(display.settings().has("soundDistance")) {
+            channel.setDistance(display.settings().get("soundDistance").getAsInt());
+        } else {
+            channel.setDistance(100);
+        }
     }
     public void queue(short data) {
         audioQueue.add(data);

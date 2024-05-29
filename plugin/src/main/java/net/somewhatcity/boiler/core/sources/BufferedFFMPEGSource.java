@@ -164,14 +164,10 @@ public class BufferedFFMPEGSource implements IBoilerSource {
             }
         }).start();
 
-
-
-
-
         new Thread(() -> {
             while (running) {
                 if(!buffer.isEmpty()) {
-                    if(bap.getAudioQueueSize() <= 960 * 2) {
+                    if(bap.getAudioQueueSize() <= 960) {
                         BoilerFrame frame = buffer.poll();
 
                         image = frame.getImage();

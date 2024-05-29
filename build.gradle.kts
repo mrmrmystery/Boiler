@@ -2,8 +2,8 @@ plugins {
     id("java-library")
     id("maven-publish")
 
-    id("io.papermc.paperweight.userdev") version "1.5.12" apply false
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.papermc.paperweight.userdev") version "1.6.0" apply false
+    id("io.github.goooler.shadow") version "8.1.7"
 }
 
 tasks["jar"].enabled = false
@@ -13,7 +13,7 @@ allprojects {
     apply(plugin = "maven-publish")
 
     group = "net.somewhatcity"
-    version = "2.0.7"
+    version = "2.0.8"
 
     repositories {
         maven("https://repo.papermc.io/repository/maven-public/")
@@ -28,7 +28,10 @@ allprojects {
 
     java {
         withSourcesJar()
-        toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 

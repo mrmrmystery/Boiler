@@ -20,15 +20,17 @@ import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Base64;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
 public class ImageSource implements IBoilerSource {
-
     private BufferedImage image;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
@@ -53,7 +55,23 @@ public class ImageSource implements IBoilerSource {
                     return;
                 }
             } else {
-                image = ImageIO.read(new URL(url));
+                if(data.has("base64")) {
+                    String base64EncodedImage = data.get("base64").getAsString();
+                    byte[] imageData = Base64.getDecoder().decode(base64EncodedImage);
+                    ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
+                    image = ImageIO.read(bais);
+
+                } else {
+                    image = ImageIO.read(new URL(url));
+
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ImageIO.write(image, "jpg", baos);
+                    byte[] imageData = baos.toByteArray();
+                    String base64EncodedImage = Base64.getEncoder().encodeToString(imageData);
+
+                    data.addProperty("base64", base64EncodedImage);
+                    display.saveSourceData(data);
+                }
             }
         } catch (IOException e) {
             display.source("error", obj);

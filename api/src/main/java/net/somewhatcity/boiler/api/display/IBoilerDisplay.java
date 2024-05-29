@@ -63,5 +63,6 @@ public interface IBoilerDisplay {
     void onInput(CommandSender player, String string);
     void onKey(CommandSender player, String key);
     void save();
+    void saveSourceData(JsonObject data);
 
 }

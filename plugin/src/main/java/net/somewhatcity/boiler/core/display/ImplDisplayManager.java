@@ -28,6 +28,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class ImplDisplayManager implements IDisplayManager {
 
@@ -46,7 +48,7 @@ public class ImplDisplayManager implements IDisplayManager {
                     displays.forEach((key, value) -> {
                         if(value.autoTick()) players.forEach(value::tick);
                     });
-                } catch (ConcurrentModificationException ex) {
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 }
             }

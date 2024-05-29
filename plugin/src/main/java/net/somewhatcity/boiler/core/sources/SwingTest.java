@@ -43,8 +43,6 @@ public class SwingTest implements IBoilerSource {
         panel.setPreferredSize(dimension);
         panel.setLayout(new FlowLayout());
 
-
-
         JButton button = new JButton("click me");
         button.addActionListener(e -> {
             player.sendMessage("click");

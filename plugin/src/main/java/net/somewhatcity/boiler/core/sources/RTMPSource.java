@@ -23,6 +23,7 @@ import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -56,7 +57,7 @@ public class RTMPSource implements IBoilerSource {
     private boolean running;
     private Queue<Short> audioQueue = new ArrayDeque<>();
     private AudioPlayer audioPlayer;
-    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
+    //private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
     private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
@@ -64,9 +65,6 @@ public class RTMPSource implements IBoilerSource {
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         String streamUrl = data.get("url").getAsString();
-
-
-
 
         VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
         LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(
@@ -94,7 +92,7 @@ public class RTMPSource implements IBoilerSource {
         channel.setDistance(100);
 
         running = true;
-        EXECUTOR.execute(() -> {
+        BoilerPlugin.EXECUTOR.execute(() -> {
             try {
                 FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(streamUrl);
                 grabber.setOption("listen", "1");

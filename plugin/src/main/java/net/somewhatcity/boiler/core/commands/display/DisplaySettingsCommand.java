@@ -66,6 +66,28 @@ public class DisplaySettingsCommand extends CommandAPICommand {
                     Util.sendMsg(sender, "Set %s to %s for display %s", "bundle", value, display.id());
                 }))
         );
+        withSubcommand(new CommandAPICommand("viewDistance")
+                .withArguments(new IntegerArgument("distance"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    int value = (int) args.get(1);
+                    display.settings().addProperty("viewDistance", value);
+                    display.save();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "renderPeriod", value, display.id());
+                }))
+        );
+        withSubcommand(new CommandAPICommand("soundDistance")
+                .withArguments(new IntegerArgument("distance"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    int value = (int) args.get(1);
+                    display.settings().addProperty("soundDistance", value);
+                    display.save();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "renderPeriod", value, display.id());
+                }))
+        );
         executes(((sender, args) -> {
             Util.sendErrMsg(sender, "Please specify an option");
         }));

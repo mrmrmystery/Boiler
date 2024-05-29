@@ -34,7 +34,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
 
 import java.util.UUID;
-
 public class Paper1202Platform implements IPlatform<Packet<ClientGamePacketListener>>, Listener {
 
     private final IListenerBridge bridge;

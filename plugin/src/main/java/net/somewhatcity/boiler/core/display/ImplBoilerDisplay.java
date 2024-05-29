@@ -29,11 +29,15 @@ import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
 import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
 
 public class ImplBoilerDisplay implements IBoilerDisplay {
+
+    private static final Executor SCENE_EXECUTOR = Executors.newCachedThreadPool();
     private final int ID;
     private IMapDisplay MAP_DISPLAY;
     private final Location CORNER_A;
@@ -45,7 +49,6 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     private IBoilerSource source;
     private String sourceName;
     private Rectangle viewport;
-    private Timer renderTimer;
     private boolean autoTick = true;
     private boolean persistent = true;
     private boolean renderPaused = false;
@@ -54,6 +57,9 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     private List<Location> speakers = new ArrayList<>();
     private HashMap<UUID, Long> lastUpdates = new HashMap<>();
     private final Set<Player> receivers = new HashSet<>();
+    private long lastRender;
+    private int renderPeriod = 20;
+    private Timer renderTimer;
 
     public ImplBoilerDisplay(int id, Location cornerA, Location cornerB, BlockFace facing) {
         this.ID = id;
@@ -67,14 +73,19 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         this.image = new BufferedImage(width(), height(), BufferedImage.TYPE_INT_ARGB);
         this.g2 = this.image.createGraphics();
 
-        this.renderTimer = new Timer();
-        this.settings.addProperty("buffering", true);
+        //this.renderTimer = new Timer();
+        this.settings.addProperty("buffer", true);
 
         save();
     }
     @Override
     public void tick(Player player) {
-        if(CORNER_A.getWorld().equals(player.getWorld()) && CORNER_A.distance(player.getLocation()) < BoilerConfig.viewDistance) {
+        int viewDistance = BoilerConfig.viewDistance;
+        if(settings.has("viewDistance")) {
+            viewDistance = settings.get("viewDistance").getAsInt();
+        }
+
+        if(CORNER_A.getWorld().equals(player.getWorld()) && CORNER_A.distance(player.getLocation()) < viewDistance) {
             if(!receivers.contains(player)) {
                 receivers.add(player);
                 MAP_DISPLAY.spawn(player);
@@ -86,6 +97,19 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
             }
         }
         if(!player.isOnline()) receivers.remove(player);
+
+        if(receivers.isEmpty() && renderTimer != null) {
+            renderTimer.cancel();
+            renderTimer = null;
+        } else if(renderTimer == null && !receivers.isEmpty()) {
+            renderTimer = new Timer();
+            renderTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    render();
+                }
+            }, 0, renderPeriod);
+        }
     }
 
     @Override
@@ -120,6 +144,8 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
 
     @Override
     public void render() {
+        //if(lastRender + renderPeriod > System.currentTimeMillis()) return;
+
         if(renderPaused) return;
         if(receivers.isEmpty()) return;
 
@@ -149,6 +175,8 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         actualReceivers.forEach(player -> {
             lastUpdates.put(player.getUniqueId(), System.currentTimeMillis());
         });
+
+        lastRender = System.currentTimeMillis();
     }
 
     @Override
@@ -165,14 +193,13 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
                 ex.printStackTrace();
             }
         }
-        this.renderTimer.cancel();
         drawingSpace.ctx().receivers().forEach(MAP_DISPLAY::despawn);
         MAP_DISPLAY = null;
     }
 
     @Override
     public Set<Player> viewers() {
-        return drawingSpace.ctx().receivers();
+        return receivers;
     }
 
     @Override
@@ -208,16 +235,13 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         drawingSpace.ctx().buffering(settings.get("buffer") != null && settings.get("buffer").getAsBoolean());
         drawingSpace.ctx().bundling(settings.get("bundle") != null && settings.get("bundle").getAsBoolean());
 
-        int renderPeriod = settings.get("renderPeriod") != null ? settings.get("renderPeriod").getAsInt() : 50;
+        renderPeriod = settings.get("renderPeriod") != null ? settings.get("renderPeriod").getAsInt() : 20;
+    }
 
-        this.renderTimer.cancel();
-        this.renderTimer = new Timer();
-        this.renderTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                render();
-            }
-        },0, renderPeriod);
+    @Override
+    public void saveSourceData(JsonObject data) {
+        this.sourceData = data;
+        save();
     }
 
     @Override
@@ -240,15 +264,19 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
                 ex.printStackTrace();
             }
         }
+
+        boolean keepLastSourceData = data != null && data.has("keepLastSourceData") && data.get("keepLastSourceData").getAsBoolean();
+
         this.sourceData = data;
         this.sourceName = name;
+
         g2.clearRect(0, 0, width(), height());
 
-        if(persistent) {
+        if(persistent && !keepLastSourceData) {
             save();
         }
 
-        new Thread(() -> {
+        BoilerPlugin.EXECUTOR.execute(() -> {
             try {
                 source = sourceClass.getDeclaredConstructor().newInstance();
                 source.load(this, data);
@@ -256,7 +284,8 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
                      NoSuchMethodException e) {
                 throw new RuntimeException(e);
             }
-        }).start();
+        });
+
     }
 
     @Override
