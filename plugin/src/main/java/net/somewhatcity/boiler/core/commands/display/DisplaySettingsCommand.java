@@ -74,7 +74,7 @@ public class DisplaySettingsCommand extends CommandAPICommand {
                     display.settings().addProperty("viewDistance", value);
                     display.save();
 
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "renderPeriod", value, display.id());
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "viewDistance", value, display.id());
                 }))
         );
         withSubcommand(new CommandAPICommand("soundDistance")
@@ -85,7 +85,18 @@ public class DisplaySettingsCommand extends CommandAPICommand {
                     display.settings().addProperty("soundDistance", value);
                     display.save();
 
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "renderPeriod", value, display.id());
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "soundDistance", value, display.id());
+                }))
+        );
+        withSubcommand(new CommandAPICommand("glowing")
+                .withArguments(new BooleanArgument("enabled"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    int value = (int) args.get(1);
+                    display.settings().addProperty("glowing", value);
+                    display.save();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "glowing", value, display.id());
                 }))
         );
         executes(((sender, args) -> {
