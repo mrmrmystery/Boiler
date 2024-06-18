@@ -54,6 +54,7 @@ public interface IBoilerDisplay {
     void renderPaused(boolean value);
     boolean renderPaused();
     void render();
+    void respawn();
     byte[] provide20msAudio();
     void remove();
     Set<Player> viewers();

@@ -10,9 +10,9 @@
 
 package net.somewhatcity.boiler.core.commands.display;
 
+import com.google.gson.JsonObject;
 import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.BooleanArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
+import dev.jorel.commandapi.arguments.*;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.commands.BoilerArguments;
@@ -97,6 +97,61 @@ public class DisplaySettingsCommand extends CommandAPICommand {
                     display.save();
 
                     Util.sendMsg(sender, "Set %s to %s for display %s", "glowing", value, display.id());
+                }))
+        );
+        withSubcommand(new CommandAPICommand("glowing")
+                .withArguments(new BooleanArgument("enabled"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    boolean value = (boolean) args.get(1);
+                    display.settings().addProperty("glowing", value);
+                    display.save();
+                    display.respawn();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "glowing", value, display.id());
+                }))
+        );
+        withSubcommand(new CommandAPICommand("itemRotation")
+                .withArguments(new IntegerArgument("rotation"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    int value = (int) args.get(1);
+                    display.settings().addProperty("itemRotation", value);
+                    display.save();
+                    display.respawn();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "itemRotation", value, display.id());
+                }))
+        );
+        withSubcommand(new CommandAPICommand("visualDirection")
+                .withArguments(new MultiLiteralArgument("direction", "UP", "DOWN", "NORTH", "EAST", "SOUTH", "WEST"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+                    String value = (String) args.get(1);
+                    display.settings().addProperty("visualDirection", value);
+                    display.save();
+                    display.respawn();
+
+                    Util.sendMsg(sender, "Set %s to %s for display %s", "visualDirection", value, display.id());
+                }))
+        );
+        withSubcommand(new CommandAPICommand("rotation")
+                .withArguments(new FloatArgument("yaw"))
+                .withArguments(new FloatArgument("pitch"))
+                .executes(((sender, args) -> {
+                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+
+                    float yaw = (float) args.get(1);
+                    float pitch = (float) args.get(2);
+
+                    JsonObject rotation = new JsonObject();
+                    rotation.addProperty("yaw", yaw);
+                    rotation.addProperty("pitch", pitch);
+
+                    display.settings().add("rotation", rotation);
+                    display.save();
+                    display.respawn();
+                    Util.sendMsg(sender, "Set %s to %s,%s for display %s", "rotation", yaw, pitch, display.id());
                 }))
         );
         executes(((sender, args) -> {

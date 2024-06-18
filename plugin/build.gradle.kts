@@ -21,13 +21,13 @@ dependencies {
     runtimeOnly(project(":platform-paper-1.20.3"))
     runtimeOnly(project(":platform-paper-1.20.5"))
 
-    implementation("dev.jorel:commandapi-bukkit-shade:9.4.2")
+    implementation("dev.jorel:commandapi-bukkit-shade:9.5.0")
     implementation("de.maxhenkel.voicechat:voicechat-api:2.4.11")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
 
     api(project(":platform-common"))
 
-    compileOnly("de.pianoman911:mapengine-api:1.7.3")
+    compileOnly("de.pianoman911:mapengine-api:1.8.0")
     compileOnly("de.pianoman911:mapengine-mediaext:1.1.0")
 }
 

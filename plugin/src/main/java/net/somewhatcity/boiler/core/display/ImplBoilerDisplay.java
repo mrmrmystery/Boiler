@@ -89,6 +89,9 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
             if(!receivers.contains(player)) {
                 receivers.add(player);
                 MAP_DISPLAY.spawn(player);
+                if(settings.has("itemRotation")) MAP_DISPLAY.itemRotation(player, settings.get("itemRotation").getAsInt());
+                if(settings.has("visualDirection")) MAP_DISPLAY.visualDirection(player, BlockFace.valueOf(settings.get("visualDirection").getAsString()));
+                if(settings.has("rotation")) MAP_DISPLAY.rotation(player, settings.getAsJsonObject("rotation").get("yaw").getAsFloat(), settings.getAsJsonObject("rotation").get("pitch").getAsFloat());
             }
         }else {
             if(receivers.contains(player)) {
@@ -180,6 +183,14 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
     }
 
     @Override
+    public void respawn() {
+        for(Player player : receivers) {
+            MAP_DISPLAY.despawn(player);
+        }
+        receivers.clear();
+    }
+
+    @Override
     public byte[] provide20msAudio() {
         return source.provide20msAudio();
     }
@@ -234,6 +245,7 @@ public class ImplBoilerDisplay implements IBoilerDisplay {
         drawingSpace.ctx().converter(settings.get("dither") != null && settings.get("dither").getAsBoolean() ? Converter.FLOYD_STEINBERG : Converter.DIRECT);
         drawingSpace.ctx().buffering(settings.get("buffer") != null && settings.get("buffer").getAsBoolean());
         drawingSpace.ctx().bundling(settings.get("bundle") != null && settings.get("bundle").getAsBoolean());
+        mapDisplay().glowing(settings.get("glowing") != null && settings.get("glowing").getAsBoolean());
 
         renderPeriod = settings.get("renderPeriod") != null ? settings.get("renderPeriod").getAsInt() : 20;
     }
