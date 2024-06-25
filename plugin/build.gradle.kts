@@ -69,11 +69,12 @@ modrinth {
     versionNumber.set(rootProject.version.toString())
     versionType.set("release")
     uploadFile.set(tasks.shadowJar)
-    gameVersions.addAll(listOf("1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4"))
+    gameVersions.addAll(listOf("1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4", "1.20.6", "1.21"))
     loaders.addAll(listOf("paper", "purpur"))
     dependencies {
-        required.project("9eGKb6K1")
         required.project("fCDPz9mZ")
         required.project("FMg8aS6R")
+        optional.project("9eGKb6K1")
+        optional.project("1bZhdhsH")
     }
 }
