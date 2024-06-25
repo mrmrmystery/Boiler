@@ -19,7 +19,8 @@ import net.somewhatcity.boiler.api.ISourceManager;
 import net.somewhatcity.boiler.api.display.IGuiManager;
 import net.somewhatcity.boiler.common.platform.IPlatform;
 import net.somewhatcity.boiler.core.api.ImplBoilerApi;
-import net.somewhatcity.boiler.core.audio.AudioManager;
+import net.somewhatcity.boiler.core.audio.plasmovoice.PlasmoLoader;
+import net.somewhatcity.boiler.core.audio.simplevoicechat.SvcLoader;
 import net.somewhatcity.boiler.core.commands.BoilerCommand;
 import net.somewhatcity.boiler.core.display.BoilerSourceManager;
 import net.somewhatcity.boiler.core.display.ImplDisplayManager;
@@ -35,7 +36,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bytedeco.javacv.FFmpegLogCallback;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -83,7 +83,12 @@ public class BoilerPlugin extends JavaPlugin {
         intervalManager = new UpdateIntervalManager(this);
 
         if(Bukkit.getPluginManager().getPlugin("voicechat") != null) {
-            AudioManager.loadSimpleVoiceChat();
+            SvcLoader.loadSimpleVoiceChat();
+        }
+
+        if(Bukkit.getPluginManager().getPlugin("PlasmoVoice") != null) {
+            System.out.println("enabeling plasmovoice support");
+            PlasmoLoader.loadPlasmoVoice();
         }
 
         this.displayManager = new ImplDisplayManager(this);

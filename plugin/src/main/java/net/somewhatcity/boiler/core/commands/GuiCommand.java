@@ -14,7 +14,6 @@ import com.google.gson.JsonObject;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.IntegerArgument;
-import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 

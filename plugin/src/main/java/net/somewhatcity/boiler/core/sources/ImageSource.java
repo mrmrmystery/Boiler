@@ -18,7 +18,6 @@ import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 
 import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -27,7 +26,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Base64;
-import java.util.Iterator;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)

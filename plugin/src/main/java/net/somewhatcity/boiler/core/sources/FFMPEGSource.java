@@ -11,26 +11,14 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
-import de.maxhenkel.voicechat.api.Group;
-import de.maxhenkel.voicechat.api.VoicechatConnection;
-import de.maxhenkel.voicechat.api.VoicechatServerApi;
-import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
-import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
-import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
 import de.pianoman911.mapengine.media.converter.MapEngineConverter;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.BooleanArgument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
-import net.somewhatcity.boiler.core.BoilerConfig;
-import net.somewhatcity.boiler.core.audio.BoilerAudioPlayer;
-import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
+import net.somewhatcity.boiler.core.audio.BAudioPlayer;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FFmpegLogCallback;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
 
@@ -40,20 +28,12 @@ import javax.sound.sampled.AudioSystem;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Supplier;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "loop", type = CommandArgumentType.BOOLEAN),
@@ -62,22 +42,19 @@ import java.util.function.Supplier;
 public class FFMPEGSource implements IBoilerSource {
 
     private boolean running;
-    private Queue<Short> audioQueue = new ArrayDeque<>();
-    private AudioPlayer audioPlayer;
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(12);
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
     private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
     private boolean loop = false;
-
-    private BoilerAudioPlayer bap;
+    private BAudioPlayer bap;
 
     private long lastAudio = 0;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         String streamUrl = data.get("url").getAsString();
         loop = data.get("loop").getAsBoolean();
-        bap = new BoilerAudioPlayer(display);
+        bap = new BAudioPlayer(display);
 
         running = true;
         EXECUTOR.execute(() -> {
@@ -119,7 +96,7 @@ public class FFMPEGSource implements IBoilerSource {
                             AudioInputStream source = new AudioInputStream(new ByteArrayInputStream(audioData), SOURCE_FORMAT, audioData.length);
                             AudioInputStream converted = AudioSystem.getAudioInputStream(TARGET_FORMAT, source);
 
-                            bap.queue(converted.readAllBytes());
+                            bap.play(converted.readAllBytes());
                         }
 
                         if(frame.image != null) {
@@ -150,7 +127,6 @@ public class FFMPEGSource implements IBoilerSource {
     @Override
     public void unload() {
         running = false;
-        if(audioPlayer != null) audioPlayer.stopPlaying();
         bap.stop();
     }
 

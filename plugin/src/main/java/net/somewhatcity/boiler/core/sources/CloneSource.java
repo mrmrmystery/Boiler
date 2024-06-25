@@ -12,19 +12,13 @@ package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.drawing.IDrawingSpace;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.BoilerPlugin;
-import net.somewhatcity.boiler.core.commands.BoilerCommand;
 import org.bukkit.Bukkit;
-
-import java.util.List;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "id", type = CommandArgumentType.INTEGER)

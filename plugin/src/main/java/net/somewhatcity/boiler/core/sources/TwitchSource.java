@@ -12,62 +12,30 @@ package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
-import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
-import de.pianoman911.mapengine.media.converter.MapEngineConverter;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
-import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.bytedeco.ffmpeg.global.avutil;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FFmpegLogCallback;
-import org.bytedeco.javacv.Frame;
-import org.bytedeco.javacv.Java2DFrameConverter;
 
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.LockSupport;
-import java.util.function.Supplier;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
 public class TwitchSource implements IBoilerSource {
-    private boolean running;
-    private Queue<Short> audioQueue = new ArrayDeque<>();
-    private AudioPlayer audioPlayer;
-    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
-    private BufferedImage image;
-    private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
-    private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
-
-    static {
-        avutil.av_log_set_level(avutil.AV_LOG_QUIET);
-    }
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         OkHttpClient client = new OkHttpClient();
@@ -77,7 +45,6 @@ public class TwitchSource implements IBoilerSource {
                 .get()
                 .build();
 
-        running = true;
         try(Response response = client.newCall(request).execute()) {
             JsonObject obj = (JsonObject) JsonParser.parseString(response.body().string());
             String streamUrl = obj.getAsJsonObject("urls").get("480p").getAsString();
@@ -92,12 +59,7 @@ public class TwitchSource implements IBoilerSource {
 
     @Override
     public void unload() {
-        running = false;
-    }
 
-    @Override
-    public void draw(Graphics2D g2, Rectangle viewport) {
-        g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
     }
 
 }

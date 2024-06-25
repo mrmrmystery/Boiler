@@ -18,18 +18,17 @@ import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.Util;
-import net.somewhatcity.boiler.core.audio.BoilerAudioPlayer;
+import net.somewhatcity.boiler.core.audio.BAudioPlayer;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 import org.bytedeco.javacv.Java2DFrameConverter;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
@@ -48,10 +47,12 @@ public class BufferedFFMPEGSource implements IBoilerSource {
     private Queue<Short> audioQueue = new ArrayDeque<>();
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
-    private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
+    //private final AudioFormat TARGET_FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000F, 16, 1, 2, 48000F, false);
+
+    private final AudioFormat TARGET_FORMAT = new AudioFormat(48000, 16, 1, true, false);
     private Queue<BoilerFrame> buffer;
     private int bufferSize = 100;
-    private BoilerAudioPlayer bap;
+    private BAudioPlayer bap;
     IBoilerDisplay display;
     private Java2DFrameConverter jconverter;
     private int imagesWithoutAudio;
@@ -61,7 +62,7 @@ public class BufferedFFMPEGSource implements IBoilerSource {
         String streamUrl = data.get("url").getAsString();
         bufferSize = data.get("buffer").getAsInt();
         buffer = new ConcurrentLinkedDeque<>();
-        bap = new BoilerAudioPlayer(display);
+        bap = new BAudioPlayer(display);
         running = true;
 
         new Thread(() -> {
@@ -118,6 +119,8 @@ public class BufferedFFMPEGSource implements IBoilerSource {
 
                                             byte[] convertedAudioData = converted.readAllBytes();
 
+
+
                                             buffer.add(new BoilerFrame(imagesSinceLastAudio.get(image), convertedAudioData));
                                             audioToJoin.clear();
                                         } else {
@@ -152,6 +155,8 @@ public class BufferedFFMPEGSource implements IBoilerSource {
                                     outBuffer.putShort(val);
                                 }
                                 audioDataSinceLastImage.add(outBuffer.array());
+
+
                             }
                         }
                     }
@@ -171,7 +176,8 @@ public class BufferedFFMPEGSource implements IBoilerSource {
                         BoilerFrame frame = buffer.poll();
 
                         image = frame.getImage();
-                        bap.queue(frame.getAudio());
+                        bap.play(frame.getAudio());
+                        //bap.queue(frame.getAudio());
                     }
                 }
             }

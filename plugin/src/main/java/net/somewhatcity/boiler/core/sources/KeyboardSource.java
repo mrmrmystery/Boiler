@@ -11,9 +11,6 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
@@ -24,8 +21,6 @@ import org.bukkit.command.CommandSender;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.util.List;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "link", type = CommandArgumentType.INTEGER)

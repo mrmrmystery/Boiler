@@ -12,7 +12,8 @@ repositories {
     maven ("https://maven.maxhenkel.de/repository/public")
     maven ("https://m2.dv8tion.net/releases")
     maven ("https://jitpack.io")
-    maven ("https://repo.plo.su")
+    maven("https://repo.plasmoverse.com/releases")
+    maven("https://repo.plasmoverse.com/snapshots")
 }
 
 dependencies {
@@ -29,6 +30,7 @@ dependencies {
 
     compileOnly("de.pianoman911:mapengine-api:1.8.0")
     compileOnly("de.pianoman911:mapengine-mediaext:1.1.0")
+    compileOnly("su.plo.voice.api:server:2.1.0-SNAPSHOT")
 }
 
 tasks {
@@ -55,7 +57,8 @@ bukkit {
     apiVersion = "1.20"
     authors = listOf("mrmrmystery")
     name = rootProject.name
-    depend = listOf("MapEngine", "MapMediaExt", "voicechat")
+    depend = listOf("MapEngine", "MapMediaExt")
+    softDepend = listOf("PlasmoVoice", "voicechat")
     version = rootProject.version.toString()
     //softDepend = listOf("voicechat")
 }

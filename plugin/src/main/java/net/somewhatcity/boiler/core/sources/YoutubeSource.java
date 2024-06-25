@@ -12,24 +12,22 @@ package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.api.util.GraphicUtils;
-import net.somewhatcity.boiler.core.Util;
-import okhttp3.*;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "quality", type = CommandArgumentType.STRING),

@@ -10,21 +10,13 @@
 
 package net.somewhatcity.boiler.core.sources;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import de.maxhenkel.voicechat.api.VoicechatServerApi;
-import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
-import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
-import de.pianoman911.mapengine.media.converter.MapEngineConverter;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.BoilerPlugin;
-import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
@@ -36,18 +28,11 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Supplier;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
@@ -56,7 +41,6 @@ public class RTMPSource implements IBoilerSource {
 
     private boolean running;
     private Queue<Short> audioQueue = new ArrayDeque<>();
-    private AudioPlayer audioPlayer;
     //private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     private BufferedImage image;
     private AudioFormat SOURCE_FORMAT = new AudioFormat(48000, 16, 1, true, true);
@@ -66,30 +50,6 @@ public class RTMPSource implements IBoilerSource {
     public void load(IBoilerDisplay display, JsonObject data) {
         String streamUrl = data.get("url").getAsString();
 
-        VoicechatServerApi serverApi = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
-        LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(
-                UUID.randomUUID(),
-                serverApi.fromServerLevel(display.cornerA().getWorld()),
-                serverApi.createPosition(display.center().getX(), display.center().getY(), display.center().getZ())
-        );
-
-        audioPlayer = serverApi.createAudioPlayer(channel, serverApi.createEncoder(), new Supplier<short[]>() {
-            @Override
-            public short[] get() {
-                short[] data = new short[960];
-                for (int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
-                    data[i] = audioQueue.poll();
-                }
-                return data;
-            }
-        });
-        audioPlayer.startPlaying();
-
-        if (channel == null) {
-            return;
-        }
-        channel.setCategory("boiler");
-        channel.setDistance(100);
 
         running = true;
         BoilerPlugin.EXECUTOR.execute(() -> {
@@ -128,11 +88,7 @@ public class RTMPSource implements IBoilerSource {
 
                             AudioInputStream source = new AudioInputStream(new ByteArrayInputStream(audioData), SOURCE_FORMAT, audioData.length);
                             AudioInputStream converted = AudioSystem.getAudioInputStream(TARGET_FORMAT, source);
-                            short[] audio = serverApi.getAudioConverter().bytesToShorts(converted.readAllBytes());
 
-                            for (short s : audio) {
-                                audioQueue.add(s);
-                            }
                         }
 
                         if (frame.image != null) {
