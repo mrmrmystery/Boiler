@@ -65,16 +65,10 @@ public class YoutubeSource implements IBoilerSource {
                     String url = json.get("url").getAsString();
                     JsonObject load = new JsonObject();
                     load.addProperty("url", url);
-                    load.addProperty("keepLastSourceData", true);
-                    display.source("vlc", load);
-                    /*
-                    JsonObject load = new JsonObject();
-                    load.addProperty("url", url);
                     load.addProperty("buffer", 100);
                     load.addProperty("keepLastSourceData", true);
                     display.source("ffmpeg-buffered", load);
 
-                     */
                 } else {
                     JsonObject err = new JsonObject();
                     err.addProperty("message", "Video unavailable");
