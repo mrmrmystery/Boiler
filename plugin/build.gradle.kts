@@ -25,6 +25,7 @@ dependencies {
     implementation("dev.jorel:commandapi-bukkit-shade:9.5.0")
     implementation("de.maxhenkel.voicechat:voicechat-api:2.4.11")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("uk.co.caprica:vlcj:4.8.2")
 
     api(project(":platform-common"))
 

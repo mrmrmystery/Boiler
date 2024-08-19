@@ -2,7 +2,7 @@ plugins {
     id("java-library")
     id("maven-publish")
 
-    id("io.papermc.paperweight.userdev") version "1.6.0" apply false
+    id("io.papermc.paperweight.userdev") version "1.7.1" apply false
     id("io.github.goooler.shadow") version "8.1.7"
 }
 

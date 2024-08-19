@@ -10,6 +10,8 @@
 
 package net.somewhatcity.boiler.core;
 
+import com.sun.jna.Native;
+import com.sun.jna.NativeLibrary;
 import de.pianoman911.mapengine.api.MapEngineApi;
 import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPIBukkitConfig;
@@ -36,6 +38,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import uk.co.caprica.vlcj.binding.lib.LibVlc;
+import uk.co.caprica.vlcj.binding.support.runtime.RuntimeUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -61,10 +65,6 @@ public class BoilerPlugin extends JavaPlugin {
     }
     @Override
     public void onEnable() {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(BoilerPlugin.class.getClassLoader());
-        //playwright = Playwright.create();
-        Thread.currentThread().setContextClassLoader(classLoader);
 
         av_log_set_level(AV_LOG_PANIC);
 
@@ -87,7 +87,7 @@ public class BoilerPlugin extends JavaPlugin {
         }
 
         if(Bukkit.getPluginManager().getPlugin("PlasmoVoice") != null) {
-            System.out.println("enabeling plasmovoice support");
+            System.out.println("enabling plasmovoice support");
             PlasmoLoader.loadPlasmoVoice();
         }
 
@@ -107,6 +107,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("swing", SwingTest.class);
         this.sourceManager.register("section-clone", SectionCloneSource.class);
         this.sourceManager.register("keyboard", KeyboardSource.class);
+        this.sourceManager.register("vlc", VlcSource.class);
 
         guiManager = new ImplGuiManager(this);
 
