@@ -10,9 +10,23 @@
 
 package net.somewhatcity.boiler.core;
 
+import com.sun.jna.Platform;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.freedesktop.gstreamer.Caps;
+import org.freedesktop.gstreamer.FlowReturn;
+import org.freedesktop.gstreamer.Gst;
+import org.freedesktop.gstreamer.GstException;
+import org.freedesktop.gstreamer.elements.AppSink;
+import org.freedesktop.gstreamer.elements.PlayBin;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 public class Util {
 
@@ -38,5 +52,71 @@ public class Util {
         }
 
         sender.sendMessage(PREFIX.append(MM.deserialize("<b><color:#ff4a56>[Error]</color></b> ")).append(MM.deserialize(msg.formatted(colored))));
+    }
+
+    public static boolean isPluginInstalled(String plugin) {
+        return (Bukkit.getPluginManager().getPlugin(plugin) != null && Bukkit.getPluginManager().getPlugin(plugin).isEnabled());
+    }
+
+    private static boolean gstreamerInstalled = false;
+
+    public static void initGstreamer() {
+        new Thread(() -> {
+            try {
+                if(Platform.isWindows()) GstreamerUtils.configurePaths();
+                Gst.init("VideoFrameExtractor");
+
+                Path target = Path.of(Bukkit.getPluginsFolder().getPath(), "Boiler/temp/videotest.mp4");
+
+                try(InputStream inputStream = Util.class.getResourceAsStream("/assets/videotest.mp4")) {
+                    if(inputStream == null) {
+                        System.err.println("Could not find videotest.mp4");
+                        return;
+                    }
+                    Files.createDirectories(target.getParent());
+                    Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+
+                PlayBin playBin = new PlayBin("VideoPlayer");
+                playBin.setInputFile(target.toFile());
+                AppSink appSink = (AppSink) playBin.getElementByName("appsink");
+                if (appSink == null) {
+                    appSink = new AppSink("appsink");
+                    playBin.setVideoSink(appSink);
+                }
+
+                Caps caps = Caps.fromString("video/x-raw,format=RGB");
+                appSink.setCaps(caps);
+                appSink.set("emit-signals", true);
+                appSink.set("sync", false);
+
+                appSink.connect(new AppSink.NEW_SAMPLE() {
+                    @Override
+                    public FlowReturn newSample(AppSink appSink) {
+                        return FlowReturn.OK;
+                    }
+                });
+
+                playBin.play();
+                gstreamerInstalled = true;
+                Gst.main();
+            } catch (GstException ex) {
+                ex.printStackTrace();
+                gstreamerInstalled = false;
+            }
+        }).start();
+
+        try {
+            Thread.sleep(5000);
+            System.out.println("Initialized GStreamer");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean isGstreamerInstalled() {
+        return gstreamerInstalled;
     }
 }

@@ -11,9 +11,9 @@
 package net.somewhatcity.boiler.core.audio;
 
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.audio.plasmovoice.PlasmoAudioPlayer;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.SvcAudioPlayer;
-import org.bukkit.Bukkit;
 
 public class BAudioPlayer {
 
@@ -21,11 +21,11 @@ public class BAudioPlayer {
     private PlasmoAudioPlayer plasmoAudioPlayer;
     public BAudioPlayer(IBoilerDisplay display) {
 
-        if(Bukkit.getPluginManager().getPlugin("voicechat") != null) {
+        if(Util.isPluginInstalled("voicechat")) {
             simpleVCAudioPlayer = new SvcAudioPlayer(display);
         }
 
-        if(Bukkit.getPluginManager().getPlugin("PlasmoVoice") != null) {
+        if(Util.isPluginInstalled("PlasmoVoice")) {
             plasmoAudioPlayer = new PlasmoAudioPlayer();
             plasmoAudioPlayer.create(display);
         }

@@ -10,8 +10,6 @@
 
 package net.somewhatcity.boiler.core;
 
-import com.sun.jna.Native;
-import com.sun.jna.NativeLibrary;
 import de.pianoman911.mapengine.api.MapEngineApi;
 import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPIBukkitConfig;
@@ -34,12 +32,12 @@ import net.somewhatcity.boiler.core.platform.PlatformUtil;
 import net.somewhatcity.boiler.core.sources.*;
 import net.somewhatcity.boiler.core.sources.hidden.DefaultSource;
 import net.somewhatcity.boiler.core.sources.hidden.ErrorSource;
+import net.somewhatcity.boiler.core.sources.VideoConverterSource;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
-import uk.co.caprica.vlcj.binding.lib.LibVlc;
-import uk.co.caprica.vlcj.binding.support.runtime.RuntimeUtil;
+import org.bytedeco.javacv.FFmpegLogCallback;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -65,8 +63,7 @@ public class BoilerPlugin extends JavaPlugin {
     }
     @Override
     public void onEnable() {
-
-        av_log_set_level(AV_LOG_PANIC);
+        Util.initGstreamer();
 
         new Metrics(this,18926);
 
@@ -76,20 +73,13 @@ public class BoilerPlugin extends JavaPlugin {
 
         this.platform = PlatformUtil.getPlatform(this, this.getClassLoader(), new ImplListenerBridge());
 
-        //this.textureManager = new TextureManager();
-
         CommandAPI.onEnable();
 
         intervalManager = new UpdateIntervalManager(this);
 
-        if(Bukkit.getPluginManager().getPlugin("voicechat") != null) {
-            SvcLoader.loadSimpleVoiceChat();
-        }
+        if(Util.isPluginInstalled("voicechat")) SvcLoader.loadSimpleVoiceChat();
+        if(Util.isPluginInstalled("PlasmoVoice")) PlasmoLoader.loadPlasmoVoice();
 
-        if(Bukkit.getPluginManager().getPlugin("PlasmoVoice") != null) {
-            System.out.println("enabling plasmovoice support");
-            PlasmoLoader.loadPlasmoVoice();
-        }
 
         this.displayManager = new ImplDisplayManager(this);
 
@@ -108,6 +98,9 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("section-clone", SectionCloneSource.class);
         this.sourceManager.register("keyboard", KeyboardSource.class);
         this.sourceManager.register("vlc", VlcSource.class);
+        this.sourceManager.register("converter", VideoConverterSource.class);
+        this.sourceManager.register("gstreamer", GstreamerSource.class);
+        this.sourceManager.register("sysinfo", SystemInfoSource.class);
 
         guiManager = new ImplGuiManager(this);
 

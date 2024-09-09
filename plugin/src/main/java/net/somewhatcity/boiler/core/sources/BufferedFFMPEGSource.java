@@ -19,16 +19,13 @@ import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.audio.BAudioPlayer;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.*;
 import org.bytedeco.javacv.Frame;
-import org.bytedeco.javacv.FrameGrabber;
-import org.bytedeco.javacv.Java2DFrameConverter;
 
 import javax.sound.sampled.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
@@ -68,6 +65,7 @@ public class BufferedFFMPEGSource implements IBoilerSource {
         new Thread(() -> {
             try {
                 jconverter = new Java2DFrameConverter();
+
                 FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(streamUrl);
 
                 if(data.has("options")) {
@@ -118,8 +116,6 @@ public class BufferedFFMPEGSource implements IBoilerSource {
                                             AudioInputStream converted = AudioSystem.getAudioInputStream(TARGET_FORMAT, source);
 
                                             byte[] convertedAudioData = converted.readAllBytes();
-
-
 
                                             buffer.add(new BoilerFrame(imagesSinceLastAudio.get(image), convertedAudioData));
                                             audioToJoin.clear();

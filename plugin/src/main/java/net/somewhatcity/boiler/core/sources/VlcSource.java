@@ -63,8 +63,6 @@ public class VlcSource implements IBoilerSource {
 
         MediaPlayerFactory factory = new MediaPlayerFactory();
 
-         
-
         mediaPlayer = factory.mediaPlayers().newEmbeddedMediaPlayer();
 
         mediaPlayer.audio().callback("", 48000, 1, new BoilerVlcAudioCallback());
