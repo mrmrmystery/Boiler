@@ -29,6 +29,7 @@ allprojects {
     java {
         withSourcesJar()
         toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+        toolchain.vendor.set(JvmVendorSpec.ADOPTOPENJDK)
 
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
