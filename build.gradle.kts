@@ -4,6 +4,7 @@ plugins {
 
     id("io.papermc.paperweight.userdev") version "1.7.1" apply false
     id("io.github.goooler.shadow") version "8.1.7"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
 tasks["jar"].enabled = false
