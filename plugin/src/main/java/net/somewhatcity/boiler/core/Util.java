@@ -42,7 +42,7 @@ public class Util {
             colored[i] = "<color:#52a3ff>" + args[i].toString() + "</color>";
         }
 
-        sender.sendMessage(PREFIX.append(MM.deserialize(msg.formatted(colored))));
+        sender.sendMessage(PREFIX.append(MM.deserialize(msg.formatted((Object[]) colored))));
     }
 
     public static void sendErrMsg(CommandSender sender, String msg, Object... args) {
@@ -51,69 +51,36 @@ public class Util {
             colored[i] = "<b><color:#52a3ff>" + args[i].toString() + "</color></b>";
         }
 
-        sender.sendMessage(PREFIX.append(MM.deserialize("<b><color:#ff4a56>[Error]</color></b> ")).append(MM.deserialize(msg.formatted(colored))));
+        sender.sendMessage(PREFIX.append(MM.deserialize("<b><color:#ff4a56>[Error]</color></b> ")).append(MM.deserialize(msg.formatted((Object[]) colored))));
     }
 
     public static boolean isPluginInstalled(String plugin) {
         return (Bukkit.getPluginManager().getPlugin(plugin) != null && Bukkit.getPluginManager().getPlugin(plugin).isEnabled());
     }
 
-    private static boolean gstreamerInstalled = false;
+    private static volatile boolean gstreamerInstalled;
 
+    private static boolean gstreamerAttempted;
     public static void initGstreamer() {
-        new Thread(() -> {
-            try {
-                if(Platform.isWindows()) GstreamerUtils.configurePaths();
-                Gst.init("VideoFrameExtractor");
-
-                Path target = Path.of(Bukkit.getPluginsFolder().getPath(), "Boiler/temp/videotest.mp4");
-
-                try(InputStream inputStream = Util.class.getResourceAsStream("/assets/videotest.mp4")) {
-                    if(inputStream == null) {
-                        System.err.println("Could not find videotest.mp4");
-                        return;
-                    }
-                    Files.createDirectories(target.getParent());
-                    Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-
-                PlayBin playBin = new PlayBin("VideoPlayer");
-                playBin.setInputFile(target.toFile());
-                AppSink appSink = (AppSink) playBin.getElementByName("appsink");
-                if (appSink == null) {
-                    appSink = new AppSink("appsink");
-                    playBin.setVideoSink(appSink);
-                }
-
-                Caps caps = Caps.fromString("video/x-raw,format=RGB");
-                appSink.setCaps(caps);
-                appSink.set("emit-signals", true);
-                appSink.set("sync", false);
-
-                appSink.connect(new AppSink.NEW_SAMPLE() {
-                    @Override
-                    public FlowReturn newSample(AppSink appSink) {
-                        return FlowReturn.OK;
-                    }
-                });
-
-                playBin.play();
-                gstreamerInstalled = true;
-                Gst.main();
-            } catch (GstException ex) {
-                ex.printStackTrace();
-                gstreamerInstalled = false;
-            }
-        }).start();
-
+        BoilerPlugin.getPlugin().runtime().startWorker("gstreamer-init", Util::ensureGstreamer);
+    }
+    public static synchronized boolean ensureGstreamer() {
+        if (gstreamerAttempted) return gstreamerInstalled;
+        gstreamerAttempted = true;
         try {
-            Thread.sleep(5000);
-            System.out.println("Initialized GStreamer");
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            if (Platform.isWindows()) GstreamerUtils.configurePaths();
+            Gst.init("Boiler");
+            gstreamerInstalled = true;
+        } catch (LinkageError | RuntimeException e) {
+            BoilerPlugin.getPlugin().getLogger().fine("GStreamer unavailable: " + e.getMessage());
         }
+        return gstreamerInstalled;
+    }
+
+    public static void shutdownGstreamer() {
+        // Sources own their pipelines. Do not shut down GStreamer's JVM-wide context:
+        // other plugins may use it, too.
+        gstreamerInstalled = false;
     }
 
     public static boolean isGstreamerInstalled() {

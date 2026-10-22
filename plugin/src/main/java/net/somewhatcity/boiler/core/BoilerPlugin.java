@@ -31,6 +31,8 @@ import net.somewhatcity.boiler.core.sources.*;
 import net.somewhatcity.boiler.core.sources.hidden.DefaultSource;
 import net.somewhatcity.boiler.core.sources.hidden.ErrorSource;
 import net.somewhatcity.boiler.core.sources.VideoConverterSource;
+import net.somewhatcity.boiler.core.remote.RemoteManager;
+import net.somewhatcity.boiler.core.smarttv.SmartTvInputs;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
@@ -49,10 +51,11 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
+import net.somewhatcity.boiler.core.runtime.BoilerRuntime;
 
 public class BoilerPlugin extends JavaPlugin {
 
-    public static final Executor EXECUTOR = Executors.newFixedThreadPool(1);
+    public static final Executor EXECUTOR = task -> getPlugin().runtime().loaders().execute(task);
     public static MapEngineApi MAP_ENGINE;
     public static Logger LOGGER;
     private static BoilerPlugin plugin;
@@ -63,6 +66,48 @@ public class BoilerPlugin extends JavaPlugin {
 
     private MediaMtx mediaMtx;
     private MediaMtxAuthServer mediaMtxAuthServer;
+    private BoilerRuntime runtime;
+    private Metrics metrics;
+    private RemoteManager remoteManager;
+    private SmartTvInputs smartTvInputs;
+    private volatile boolean stopping;
+
+    public BoilerRuntime runtime() { return runtime; }
+    public boolean stopping() { return stopping; }
+    public <T> T callOnMain(java.util.concurrent.Callable<T> action) {
+        if (stopping) throw new IllegalStateException("Boiler is stopping");
+        if (Bukkit.isPrimaryThread()) {
+            try { return action.call(); }
+            catch (Exception e) { throw new IllegalStateException(e); }
+        }
+        java.util.concurrent.CompletableFuture<T> result = new java.util.concurrent.CompletableFuture<>();
+        onMain(() -> {
+            if (result.isCancelled()) return;
+            try {
+                T value = action.call();
+                // Cancellation can race with a resource being created on the server thread.
+                if (!result.complete(value)) {
+                    if (value instanceof AutoCloseable resource) resource.close();
+                    else if (value instanceof org.bukkit.scheduler.BukkitTask task) task.cancel();
+                }
+            }
+            catch (Exception e) { result.completeExceptionally(e); }
+        });
+        try { return result.get(15, java.util.concurrent.TimeUnit.SECONDS); }
+        catch (InterruptedException e) {
+            result.cancel(false);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Source loading cancelled", e);
+        } catch (Exception e) {
+            result.cancel(false);
+            throw new IllegalStateException(e);
+        }
+    }
+    public void onMain(Runnable action) {
+        if (stopping) return;
+        if (Bukkit.isPrimaryThread()) action.run();
+        else if (isEnabled()) Bukkit.getScheduler().runTask(this, () -> { if (!stopping) action.run(); });
+    }
 
     @Override
     public void onLoad() {
@@ -71,11 +116,13 @@ public class BoilerPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        stopping = false;
+        runtime = new BoilerRuntime();
 
         FFmpegLogCallback.set();
         avutil.av_log_set_level(avutil.AV_LOG_ERROR);
 
-        new Metrics(this,18926);
+        metrics = new Metrics(this,18926);
         new BoilerConfig(this);
 
         if(BoilerConfig.clientEnabled) {
@@ -137,6 +184,7 @@ public class BoilerPlugin extends JavaPlugin {
         this.sourceManager.register("sysinfo", SystemInfoSource.class);
         this.sourceManager.register("client", BoilerClientSource.class);
         this.sourceManager.register("client-stream", BoilerClientStreamSource.class);
+        this.sourceManager.register("smarttv", SmartTVSource.class);
 
 
         this.api = new ImplBoilerApi(this);
@@ -145,6 +193,10 @@ public class BoilerPlugin extends JavaPlugin {
         PluginManager pm = Bukkit.getPluginManager();
         pm.registerEvents(new BoilerListener(), this);
         pm.registerEvents(new PlayerJoinListener(), this);
+        smartTvInputs = new SmartTvInputs(this);
+        remoteManager = new RemoteManager(this);
+        pm.registerEvents(smartTvInputs, this);
+        pm.registerEvents(remoteManager, this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands ->
                 commands.registrar().register(BoilerCommand.create(this))
@@ -167,8 +219,19 @@ public class BoilerPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (mediaMtx != null) mediaMtx.stop();
-        if (mediaMtxAuthServer != null) mediaMtxAuthServer.stop();
+        stopping = true;
+        if (remoteManager != null) closeSafely("remote controls", remoteManager::close);
+        if (smartTvInputs != null) closeSafely("SmartTV inputs", smartTvInputs::close);
+        if (displayManager instanceof ImplDisplayManager manager) closeSafely("displays", manager::close);
+        closeSafely("GStreamer", Util::shutdownGstreamer);
+        if (mediaMtx != null) closeSafely("MediaMTX", mediaMtx::stop);
+        if (mediaMtxAuthServer != null) closeSafely("authentication server", mediaMtxAuthServer::stop);
+        if (metrics != null) closeSafely("metrics", metrics::shutdown);
+        if (runtime != null) closeSafely("background runtime", runtime::close);
+    }
+    private void closeSafely(String resource, Runnable close) {
+        try { close.run(); }
+        catch (Exception e) { getLogger().log(java.util.logging.Level.WARNING, "Closing " + resource, e); }
     }
     public IDisplayManager displayManager() {
         return displayManager;
@@ -176,6 +239,8 @@ public class BoilerPlugin extends JavaPlugin {
     public ISourceManager sourceManager() {
         return sourceManager;
     }
+    public RemoteManager remoteManager() { return remoteManager; }
+    public SmartTvInputs smartTvInputs() { return smartTvInputs; }
     public UpdateIntervalManager intervalManager() {
         return intervalManager;
     }

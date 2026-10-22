@@ -10,8 +10,6 @@
 
 package net.somewhatcity.boiler.core.display;
 
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
 import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.clientside.IMapDisplay;
 import de.pianoman911.mapengine.api.drawing.IDrawingSpace;
@@ -22,440 +20,365 @@ import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.SourceType;
 import net.somewhatcity.boiler.core.BoilerConfig;
 import net.somewhatcity.boiler.core.BoilerPlugin;
-import net.somewhatcity.boiler.core.listener.PlayerJoinListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.awt.*;
+import java.awt.Rectangle;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.*;
-import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
 
 public class ImplBoilerDisplay implements IBoilerDisplay, Listener {
-
-    private static final Executor SCENE_EXECUTOR = Executors.newCachedThreadPool();
     private final int ID;
-    private IMapDisplay MAP_DISPLAY;
+    private final IMapDisplay MAP_DISPLAY;
     private final Location CORNER_A;
     private final Location CORNER_B;
     private final BlockFace FACING;
-    private IDrawingSpace drawingSpace;
-    private BufferedImage image;
-    private Graphics2D g2;
-    private IBoilerSource source;
-    private String sourceName;
-    private Rectangle viewport;
-    private boolean autoTick = true;
-    private boolean persistent = true;
-    private boolean renderPaused = false;
-    private JsonObject settings = new JsonObject();
-    private JsonObject sourceData = new JsonObject();
-    private List<Location> speakers = new ArrayList<>();
-    private HashMap<UUID, Long> lastUpdates = new HashMap<>();
-    private final Set<Player> receivers = new HashSet<>();
-    private long lastRender;
-    private int renderPeriod = 20;
-    private Timer renderTimer;
+    private final IDrawingSpace drawingSpace;
+    private final RasterRenderer raster = new RasterRenderer();
+    private final RasterRenderer sectionRaster = new RasterRenderer();
+    private final ReentrantLock renderLock = new ReentrantLock();
+    private final SourceGeneration generations = new SourceGeneration();
+    private volatile IBoilerSource source;
+    private volatile String sourceName;
+    private volatile Rectangle viewport;
+    private volatile boolean autoTick = true;
+    private volatile boolean persistent = true;
+    private volatile boolean renderPaused;
+    private volatile boolean removed;
+    private volatile JsonObject settings = new JsonObject();
+    private volatile JsonObject sourceData = new JsonObject();
+    private final List<Location> speakers = new CopyOnWriteArrayList<>();
+    private final Map<UUID, Long> lastUpdates = new ConcurrentHashMap<>();
+    private final Set<Player> receivers = ConcurrentHashMap.newKeySet();
+    private volatile SourceType sourceType;
+    private volatile int renderPeriod = 20;
+    private final RenderLoop renderLoop;
+    private final net.somewhatcity.boiler.core.runtime.LatestTaskQueue loads;
+    private volatile Thread loadingThread;
+    private volatile IBoilerSource loadingSource;
 
-    public ImplBoilerDisplay(int id, Location cornerA, Location cornerB, BlockFace facing) {
-        this.ID = id;
-        this.CORNER_A = cornerA;
-        this.CORNER_B = cornerB;
-        this.FACING = facing;
+    private void cancelLoading() {
+        IBoilerSource loading = loadingSource;
+        if (loading instanceof net.somewhatcity.boiler.core.sources.CancellableLoad cancellable) cancellable.cancelLoad();
+        Thread thread = loadingThread;
+        if (thread != null) thread.interrupt();
+    }
 
-        this.MAP_DISPLAY = MAP_ENGINE.displayProvider().createBasic(cornerA.toVector().toBlockVector(), cornerB.toVector().toBlockVector(), facing);
-        this.viewport = new Rectangle(0, 0, width(), height());
-        this.drawingSpace = MAP_ENGINE.pipeline().createDrawingSpace(MAP_DISPLAY);
-        this.image = new BufferedImage(width(), height(), BufferedImage.TYPE_INT_ARGB);
-        this.g2 = this.image.createGraphics();
-
-        this.settings.addProperty("buffer", true);
-
-        MAP_DISPLAY.frameAt(0, 0).frameEntityId();
-
+    public ImplBoilerDisplay(int id, Location a, Location b, BlockFace facing) {
+        ID = id;
+        CORNER_A = a;
+        CORNER_B = b;
+        FACING = facing;
+        MAP_DISPLAY = MAP_ENGINE.displayProvider().createBasic(a.toVector().toBlockVector(), b.toVector().toBlockVector(), facing);
+        viewport = new Rectangle(0, 0, width(), height());
+        drawingSpace = MAP_ENGINE.pipeline().createDrawingSpace(MAP_DISPLAY);
+        loads = new net.somewhatcity.boiler.core.runtime.LatestTaskQueue(BoilerPlugin.getPlugin().runtime().loaders());
+        renderLoop = new RenderLoop(BoilerPlugin.getPlugin().runtime().render(), () -> {
+            try { render(); }
+            catch (Exception e) { BoilerPlugin.getPlugin().getLogger().log(Level.WARNING, "Rendering display " + ID, e); }
+        });
+        settings.addProperty("buffer", true);
+        drawingSpace.ctx().buffering(true);
         BoilerPlugin.getPlugin().getServer().getPluginManager().registerEvents(this, BoilerPlugin.getPlugin());
-
-        save();
     }
 
-    @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
+    private void main(Runnable action) { BoilerPlugin.getPlugin().onMain(action); }
 
+    @EventHandler public void onQuit(PlayerQuitEvent event) {
+        receivers.remove(event.getPlayer());
+        lastUpdates.remove(event.getPlayer().getUniqueId());
     }
 
-    @EventHandler
-    public void onQuit(PlayerQuitEvent e) {
-        receivers.remove(e.getPlayer());
+    @Override public void tick() {
+        if (!Bukkit.isPrimaryThread()) { main(this::tick); return; }
+        Map<UUID, List<ImplDisplayManager.ViewerPosition>> players = ImplDisplayManager.viewerPositions();
+        tick(players);
     }
 
-    @Override
-    public void tick() {
-
-        SourceConfig sourceConfig = null;
-        if(source != null) sourceConfig = source.getClass().getAnnotation(SourceConfig.class);
-
-        int viewDistance = BoilerConfig.viewDistance;
-        if(settings.has("viewDistance")) {
-            viewDistance = settings.get("viewDistance").getAsInt();
-        }
-
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if(CORNER_A.getWorld().equals(player.getWorld()) && CORNER_A.distance(player.getLocation()) < viewDistance) {
-                if(!receivers.contains(player)) {
-                    receivers.add(player);
-
-                    if(BoilerConfig.clientEnabled && sourceConfig != null && sourceConfig.sourceType().equals(SourceType.CLIENT)) {
-                        System.out.println("DISPLAY_CREATE " + id());
-
-                        String host = BoilerConfig.rtmpHost;
-                        String bind = BoilerConfig.rtmpBind;
-                        int port = BoilerConfig.rtmpPort;
-
-                        String stream = String.format("rtsp://{user}:{password}@%s:%s/live/display_%s", host, port, id());
-                        String username = "bs_" + player.getName().replace("_", "").toLowerCase(Locale.ROOT);
-                        String password = UUID.randomUUID().toString().replace("-", "");
-
-                        BoilerPlugin.getPlugin().mediaMtxAuthServer().registerUser(username, password);
-
-                        String userStream = stream
-                                .replace("{user}", username)
-                                .replace("{password}", password);
-
-                        BoilerClientUtil.sendCreateDisplay(player, this, userStream);
-                    } else {
-                        MAP_DISPLAY.spawn(player);
-                        System.out.println("Spawning %s for %s".formatted(id(), player.getName()));
-                        if(settings.has("itemRotation")) MAP_DISPLAY.itemRotation(player, settings.get("itemRotation").getAsInt());
-                        if(settings.has("visualDirection")) MAP_DISPLAY.visualDirection(player, BlockFace.valueOf(settings.get("visualDirection").getAsString()));
-                        if(settings.has("rotation")) MAP_DISPLAY.rotation(player, settings.getAsJsonObject("rotation").get("yaw").getAsFloat(), settings.getAsJsonObject("rotation").get("pitch").getAsFloat());
-                    }
-                }
-            }else {
-                if(receivers.contains(player)) {
-                    receivers.remove(player);
-
-                    if(BoilerConfig.clientEnabled && sourceConfig != null && sourceConfig.sourceType().equals(SourceType.CLIENT)) {
-                        BoilerClientUtil.sendRemoveDisplay(player, this);
-                    } else {
-                        MAP_DISPLAY.despawn(player);
-                    }
-                }
+    void tick(Map<UUID, List<ImplDisplayManager.ViewerPosition>> players) {
+        if (removed) return;
+        if (source instanceof CompositeSource composite) {
+            SourceType effective = composite.effectiveSourceType();
+            if (sourceType != effective) {
+                sourceType = effective;
+                respawn();
             }
         }
-
-        if(sourceConfig != null && sourceConfig.sourceType().equals(SourceType.SERVER)) {
-            // nothing
-        } else {
-            if(receivers.isEmpty() && renderTimer != null) {
-                renderTimer.cancel();
-                renderTimer = null;
-            } else if(renderTimer == null && !receivers.isEmpty()) {
-                renderTimer = new Timer();
-                renderTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        if(mapDisplay() != null) {
-                            render();
-                        }
-                    }
-                }, 0, renderPeriod);
+        if (source == null && sourceName == null) source("default", null);
+        int distance = settings.has("viewDistance") ? settings.get("viewDistance").getAsInt() : BoilerConfig.viewDistance;
+        double squared = (double) distance * distance;
+        Set<Player> visible = new HashSet<>();
+        for (ImplDisplayManager.ViewerPosition viewer : players.getOrDefault(CORNER_A.getWorld().getUID(), List.of())) {
+            double dx = CORNER_A.getX() - viewer.x(), dy = CORNER_A.getY() - viewer.y(), dz = CORNER_A.getZ() - viewer.z();
+            if (distance > 0 && dx * dx + dy * dy + dz * dz < squared) visible.add(viewer.player());
+        }
+        boolean client = BoilerConfig.clientEnabled && sourceType == SourceType.CLIENT;
+        for (Player player : new ArrayList<>(receivers)) {
+            if (!visible.contains(player) && receivers.remove(player)) {
+                if (client) BoilerClientUtil.sendRemoveDisplay(player, this);
+                else MAP_DISPLAY.despawn(player);
             }
         }
-    }
-
-    @Override
-    public boolean autoTick() {
-        return autoTick;
-    }
-
-    @Override
-    public void autoTick(boolean value) {
-        this.autoTick = value;
-    }
-
-    @Override
-    public boolean persistent() {
-        return persistent;
-    }
-
-    @Override
-    public void persistent(boolean value) {
-        this.persistent = value;
-    }
-
-    @Override
-    public void renderPaused(boolean value) {
-        this.renderPaused = value;
-    }
-
-    @Override
-    public boolean renderPaused() {
-        return renderPaused;
-    }
-
-    @Override
-    public void render() {
-
-        if(renderPaused) return;
-        if(receivers.isEmpty()) return;
-
-        if(source == null) {
-            source("default", null);
-            return;
-        }
-
-        Set<Player> actualReceivers = new HashSet<>();
-        actualReceivers.addAll(receivers);
-        Set<Player> toRemove = new HashSet<>();
-
-        actualReceivers.forEach(player -> {
-
-            int interval = BoilerPlugin.getPlugin().intervalManager().getInterval(player);
-            if(interval > 0 && lastUpdates.containsKey(player.getUniqueId())) {
-                long lastUpdate = lastUpdates.get(player.getUniqueId());
-                if(lastUpdate + interval > System.currentTimeMillis()) {
-                    toRemove.add(player);
-                }
+        for (Player player : visible) {
+            if (!receivers.add(player)) continue;
+            if (client) {
+                String username = "bs_" + player.getName().replace("_", "").toLowerCase(Locale.ROOT);
+                String password = UUID.randomUUID().toString().replace("-", "");
+                BoilerPlugin.getPlugin().mediaMtxAuthServer().registerUser(username, password);
+                String stream = "rtsp://%s:%s@%s:%s/live/display_%s".formatted(username, password, BoilerConfig.rtmpHost, BoilerConfig.rtmpPort, id());
+                BoilerClientUtil.sendCreateDisplay(player, this, stream);
+            } else {
+                MAP_DISPLAY.spawn(player);
+                if (settings.has("itemRotation")) MAP_DISPLAY.itemRotation(player, settings.get("itemRotation").getAsInt());
+                if (settings.has("visualDirection")) MAP_DISPLAY.visualDirection(player, BlockFace.valueOf(settings.get("visualDirection").getAsString()));
+                if (settings.has("rotation")) MAP_DISPLAY.rotation(player, settings.getAsJsonObject("rotation").get("yaw").getAsFloat(), settings.getAsJsonObject("rotation").get("pitch").getAsFloat());
             }
-        });
-        actualReceivers.removeAll(toRemove);
-
-        drawingSpace.ctx().receivers(actualReceivers);
-        source.draw(drawingSpace);
-        drawingSpace.flush();
-
-        actualReceivers.forEach(player -> {
-            lastUpdates.put(player.getUniqueId(), System.currentTimeMillis());
-        });
-
-        lastRender = System.currentTimeMillis();
+        }
+        updateRenderTask();
     }
 
-    @Override
-    public void respawn() {
-        for(Player player : receivers) {
+    private void updateRenderTask() {
+        boolean needed = !removed && !renderPaused && !receivers.isEmpty() && sourceType != SourceType.SERVER;
+        renderLoop.update(needed, renderPeriod);
+    }
+
+    @Override public void render() {
+        if (removed || renderPaused || receivers.isEmpty() || !renderLock.tryLock()) return;
+        try {
+            IBoilerSource current = source;
+            if (current == null || removed || renderPaused) return;
+            long now = System.nanoTime();
+            Set<Player> eligible = new HashSet<>();
+            Set<UUID> viewerIds = new HashSet<>();
+            for (Player player : receivers) viewerIds.add(player.getUniqueId());
+            lastUpdates.keySet().retainAll(viewerIds);
+            for (Player player : receivers) {
+                int interval = BoilerPlugin.getPlugin().intervalManager().getInterval(player);
+                Long last = lastUpdates.get(player.getUniqueId());
+                if (interval <= 0 || last == null || now - last >= TimeUnit.MILLISECONDS.toNanos(interval)) eligible.add(player);
+            }
+            if (eligible.isEmpty()) return;
+            drawingSpace.ctx().receivers(eligible);
+            raster.draw(current, drawingSpace, width(), height());
+            drawingSpace.flush();
+            for (Player player : eligible)
+                lastUpdates.compute(player.getUniqueId(), (id, previous) -> receivers.contains(player) ? now : null);
+        } finally { renderLock.unlock(); }
+    }
+
+    public void drawSection(Graphics2D graphics, int x, int y, int width, int height) {
+        // Avoid deadlocks from cyclic section clones; do not wait on another renderer.
+        if (renderLock.isHeldByCurrentThread() || !renderLock.tryLock()) return;
+        try {
+            if (source == null || removed) return;
+            BufferedImage snapshot = sectionRaster.drawImage(source, width(), height());
+            graphics.drawImage(snapshot, 0, 0, width, height, x, y, x + width, y + height, null);
+        } finally { renderLock.unlock(); }
+    }
+
+    @Override public void respawn() {
+        if (!Bukkit.isPrimaryThread()) { main(this::respawn); return; }
+        for (Player player : receivers) {
             MAP_DISPLAY.despawn(player);
+            if (BoilerConfig.clientEnabled) BoilerClientUtil.sendRemoveDisplay(player, this);
         }
         receivers.clear();
+        renderLock.lock();
+        try { lastUpdates.clear(); }
+        finally { renderLock.unlock(); }
+        updateRenderTask();
     }
 
-    @Override
-    public void remove() {
-        if(this.source != null) {
-            try {
-                source.unload();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-
+    @Override public void remove() {
+        if (!Bukkit.isPrimaryThread()) { main(this::remove); return; }
+        if (removed) return;
+        removed = true;
         autoTick = false;
-        renderTimer.cancel();
-
-        receivers.forEach(player -> {
-            MAP_DISPLAY.despawn(player);
-        });
-        receivers.clear();
-
-        MAP_DISPLAY = null;
-
-        PlayerJoinEvent.getHandlerList().unregister(this);
-        PlayerQuitEvent.getHandlerList().unregister(this);
+        generations.close();
+        loads.close();
+        cancelLoading();
+        updateRenderTask();
+        renderLoop.close();
+        renderLock.lock();
+        try {
+            IBoilerSource old = source;
+            source = null;
+            unload(old);
+            raster.clear();
+            sectionRaster.clear();
+        } finally { renderLock.unlock(); }
+        respawn();
+        MAP_DISPLAY.destroy();
+        HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public String rtspPublishUrl() {
-        return "rtsp://localhost:8554/live/display_%s".formatted(id());
+    private void unload(IBoilerSource old) {
+        if (old == null) return;
+        try { old.unload(); }
+        catch (Exception e) { BoilerPlugin.getPlugin().getLogger().log(Level.WARNING, "Unloading display " + ID, e); }
     }
 
-    @Override
-    public Set<Player> viewers() {
-        return receivers;
-    }
-
-    @Override
-    public List<Location> speakers() {
-        return Collections.unmodifiableList(speakers);
-    }
-
-    @Override
-    public void addSpeaker(Location location) {
-        speakers.add(location);
-    }
-
-    @Override
-    public void clearSpeakers() {
-        speakers.clear();
-    }
-
-    @Override
-    public void onClick(CommandSender sender, int x, int y, boolean right) {
-        if(source != null) source.onClick(sender, x, y, right);
-    }
-
-    @Override
-    public void onScroll(CommandSender sender, int x, int y, int delta) {
-        if(source != null) source.onScroll(sender, x, y, delta);
-    }
-
-    @Override
-    public void onInput(CommandSender sender, String string) {
-        if(source != null) source.onInput(sender, string);
-    }
-
-    @Override
-    public void onKey(CommandSender sender, String key) {
-        if(source != null) source.onKey(sender, key);
-    }
-
-    @Override
-    public void save() {
-        BoilerPlugin.getPlugin().displayManager().saveDisplay(this);
-
-        drawingSpace.ctx().converter(settings.get("dither") != null && settings.get("dither").getAsBoolean() ? Converter.FLOYD_STEINBERG : Converter.DIRECT);
-        drawingSpace.ctx().buffering(settings.get("buffer") != null && settings.get("buffer").getAsBoolean());
-        drawingSpace.ctx().bundling(settings.get("bundle") != null && settings.get("bundle").getAsBoolean());
-        mapDisplay().glowing(settings.get("glowing") != null && settings.get("glowing").getAsBoolean());
-
-        renderPeriod = settings.get("renderPeriod") != null ? settings.get("renderPeriod").getAsInt() : 20;
-    }
-
-    @Override
-    public void saveSourceData(JsonObject data) {
-        this.sourceData = data;
-        save();
-    }
-
-    @Override
-    public int id() {
-        return this.ID;
-    }
-
-    @Override
-    public void source(String name, JsonObject data) {
-        Class<? extends IBoilerSource> sourceClass = BoilerPlugin.getPlugin().sourceManager().source(name);
-        if(sourceClass == null) {
-            BoilerPlugin.getPlugin().getLogger().log(Level.WARNING, "Failed to load source for map display " + this.id() + " (source not found)");
+    @Override public void source(String name, JsonObject data) {
+        if (!Bukkit.isPrimaryThread()) { main(() -> source(name, data)); return; }
+        if (removed) return;
+        Class<? extends IBoilerSource> type = BoilerPlugin.getPlugin().sourceManager().source(name);
+        if (type == null) {
+            BoilerPlugin.getPlugin().getLogger().warning("Unknown source: " + name);
             return;
         }
-
-        if(this.source != null) {
+        long generation = generations.next();
+        cancelLoading();
+        renderLock.lock();
+        try {
+            IBoilerSource old = source;
+            source = null;
+            unload(old);
+            renderPaused = false;
+        } finally { renderLock.unlock(); }
+        sourceName = name;
+        sourceData = data;
+        if (persistent && !(data != null && data.has("keepLastSourceData") && data.get("keepLastSourceData").getAsBoolean())) save();
+        respawn();
+        SourceConfig config = type.getAnnotation(SourceConfig.class);
+        sourceType = config == null ? null : config.sourceType();
+        try { loads.submit(() -> {
+            if (!generations.current(generation)) return;
+            IBoilerSource candidate = null;
+            loadingThread = Thread.currentThread();
             try {
-                this.source.unload();
-            } catch (Exception ex) {
-                ex.printStackTrace();
+                if (!generations.current(generation)) return;
+                candidate = type.getDeclaredConstructor().newInstance();
+                loadingSource = candidate;
+                if (!generations.current(generation)) return;
+                candidate.load(scopedDisplay(generation, data), data);
+                renderLock.lock();
+                try {
+                    if (generations.current(generation)) {
+                        source = candidate;
+                        candidate = null;
+                    }
+                } finally { renderLock.unlock(); }
+            } catch (Exception e) {
+                if (generations.current(generation)) {
+                    BoilerPlugin.getPlugin().getLogger().log(Level.WARNING, "Loading source " + name + " for display " + ID, e);
+                    JsonObject error = new JsonObject();
+                    error.addProperty("message", "Failed to load " + name);
+                    if (!name.equals("error")) main(() -> { if (generations.current(generation)) source("error", error); });
+                }
+            } finally {
+                unload(candidate);
+                loadingSource = null;
+                loadingThread = null;
+                Thread.interrupted();
             }
+        }); } catch (RejectedExecutionException e) {
+            sourceType = null;
+            BoilerPlugin.getPlugin().getLogger().warning("Source loading queue is full for display " + ID);
+            net.somewhatcity.boiler.core.sources.hidden.ErrorSource error = new net.somewhatcity.boiler.core.sources.hidden.ErrorSource();
+            JsonObject message = new JsonObject();
+            message.addProperty("message", "Source loading is busy; please retry");
+            error.load(scopedDisplay(generation, data), message);
+            renderLock.lock();
+            try { source = error; }
+            finally { renderLock.unlock(); }
         }
+    }
 
-        boolean keepLastSourceData = data != null && data.has("keepLastSourceData") && data.get("keepLastSourceData").getAsBoolean();
-
-        this.sourceData = data;
-        this.sourceName = name;
-
-        //g2.clearRect(0, 0, width(), height());
-
-        if(persistent && !keepLastSourceData) {
-            save();
-        }
-
-        BoilerPlugin.EXECUTOR.execute(() -> {
-            try {
-                source = sourceClass.getDeclaredConstructor().newInstance();
-                source.load(this, data);
-
-                receivers.forEach(player -> {
-                    MAP_DISPLAY.despawn(player);
-                    BoilerClientUtil.sendRemoveDisplay(player, this);
-                });
-                receivers.clear();
-
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                     NoSuchMethodException e) {
-                throw new RuntimeException(e);
+    // A source may retain its display and call back after a network response or EOF.
+    // Keep those callbacks scoped to that source, even after a newer source has loaded.
+    private IBoilerDisplay scopedDisplay(long generation, JsonObject data) {
+        return (IBoilerDisplay) Proxy.newProxyInstance(IBoilerDisplay.class.getClassLoader(), new Class<?>[]{IBoilerDisplay.class}, (proxy, method, args) -> {
+            if (method.getName().equals("sourceData")) return generations.current(generation) ? sourceData : data;
+            if (method.getReturnType() == void.class) {
+                if (method.getName().equals("render")) {
+                    if (generations.current(generation)) render();
+                    return null;
+                }
+                Runnable invoke = () -> {
+                    if (!generations.current(generation)) return;
+                    try { method.invoke(this, args); }
+                    catch (ReflectiveOperationException e) { throw new IllegalStateException(e); }
+                };
+                main(invoke);
+                return null;
             }
+            try { return method.invoke(this, args); }
+            catch (InvocationTargetException e) { throw e.getCause(); }
         });
-
     }
 
-    @Override
-    public String sourceName() {
-        return sourceName;
+    @Override public void save() {
+        if (!Bukkit.isPrimaryThread()) { main(this::save); return; }
+        if (removed) return;
+        renderLock.lock();
+        try {
+            drawingSpace.ctx().converter(settings.has("dither") && settings.get("dither").getAsBoolean() ? Converter.FLOYD_STEINBERG : Converter.DIRECT);
+            drawingSpace.ctx().buffering(settings.has("buffer") && settings.get("buffer").getAsBoolean());
+            drawingSpace.ctx().bundling(settings.has("bundle") && settings.get("bundle").getAsBoolean());
+            MAP_DISPLAY.glowing(settings.has("glowing") && settings.get("glowing").getAsBoolean());
+            int period = Math.max(1, settings.has("renderPeriod") ? settings.get("renderPeriod").getAsInt() : 20);
+            renderPeriod = period;
+        } finally { renderLock.unlock(); }
+        updateRenderTask();
+        BoilerPlugin.getPlugin().displayManager().saveDisplay(this);
     }
 
-    @Override
-    public IBoilerSource source() {
-        return source;
-    }
-
-    @Override
-    public JsonObject sourceData() {
-        return sourceData;
-    }
-
-    @Override
-    public Location cornerA() {
-        return CORNER_A;
-    }
-
-    @Override
-    public Location cornerB() {
-        return CORNER_B;
-    }
-
-    @Override
-    public Location center() {
-        return CORNER_A.clone().add(CORNER_B).multiply(0.5);
-    }
-
-    @Override
-    public JsonObject settings() {
-        return settings;
-    }
-
-    @Override
-    public void settings(JsonObject obj) {
-        settings = obj;
+    @Override public void saveSourceData(JsonObject data) {
+        if (!Bukkit.isPrimaryThread()) { main(() -> saveSourceData(data)); return; }
+        sourceData = data;
         save();
     }
-
-    @Override
-    public BlockFace facing() {
-        return FACING;
+    @Override public void onClick(CommandSender sender, int x, int y, boolean right) { withSource(s -> s.onClick(sender, x, y, right)); }
+    @Override public void onScroll(CommandSender sender, int x, int y, int delta) { withSource(s -> s.onScroll(sender, x, y, delta)); }
+    @Override public void onInput(CommandSender sender, String input) { withSource(s -> s.onInput(sender, input)); }
+    @Override public void onKey(CommandSender sender, String key) { withSource(s -> s.onKey(sender, key)); }
+    private void withSource(java.util.function.Consumer<IBoilerSource> action) {
+        renderLock.lock();
+        try { if (source != null && !removed) action.accept(source); }
+        finally { renderLock.unlock(); }
     }
-
-    @Override
-    public IMapDisplay mapDisplay() {
-        return MAP_DISPLAY;
+    @Override public int id() { return ID; }
+    @Override public boolean autoTick() { return autoTick; }
+    @Override public void autoTick(boolean value) { autoTick = value; }
+    @Override public boolean persistent() { return persistent; }
+    @Override public void persistent(boolean value) { persistent = value; }
+    @Override public boolean renderPaused() { return renderPaused; }
+    @Override public void renderPaused(boolean value) { renderPaused = value; updateRenderTask(); }
+    @Override public String rtspPublishUrl() { return "rtsp://localhost:8554/live/display_%s".formatted(ID); }
+    @Override public Set<Player> viewers() { return receivers; }
+    @Override public List<Location> speakers() { return Collections.unmodifiableList(speakers); }
+    @Override public void addSpeaker(Location location) { speakers.add(location); }
+    @Override public void clearSpeakers() { speakers.clear(); }
+    @Override public String sourceName() { return sourceName; }
+    @Override public IBoilerSource source() { return source; }
+    @Override public JsonObject sourceData() { return sourceData; }
+    @Override public Location cornerA() { return CORNER_A; }
+    @Override public Location cornerB() { return CORNER_B; }
+    @Override public Location center() { return CORNER_A.clone().add(CORNER_B).multiply(0.5); }
+    @Override public JsonObject settings() { return settings; }
+    @Override public void settings(JsonObject value) {
+        if (!Bukkit.isPrimaryThread()) { main(() -> settings(value)); return; }
+        settings = Objects.requireNonNull(value);
+        save();
     }
-
-    @Override
-    public IDrawingSpace drawingSpace() {
-        return drawingSpace;
-    }
-
-    @Override
-    public void viewport(Rectangle viewport) {
-        if(viewport == null) throw new NullPointerException("Viewport cannot be null");
-        this.viewport = viewport;
-    }
-
-    @Override
-    public Rectangle viewport() {
-        return viewport;
-    }
-
+    @Override public BlockFace facing() { return FACING; }
+    @Override public IMapDisplay mapDisplay() { return MAP_DISPLAY; }
+    @Override public IDrawingSpace drawingSpace() { return drawingSpace; }
+    @Override public void viewport(Rectangle value) { viewport = Objects.requireNonNull(value, "Viewport cannot be null"); }
+    @Override public Rectangle viewport() { return viewport; }
 }

@@ -13,33 +13,26 @@ package net.somewhatcity.boiler.core.sources.hidden;
 import com.google.gson.JsonObject;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
-import net.somewhatcity.boiler.api.util.GraphicUtils;
 
 import java.awt.*;
-import java.util.HashMap;
-import java.util.TreeMap;
 
 public class DefaultSource implements IBoilerSource {
 
-    private IBoilerDisplay display;
+    private final StatusScreen screen = new StatusScreen();
+    private int displayId;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
-        this.display = display;
+        displayId = display.id();
+        screen.clear();
     }
 
     @Override
     public void unload() {
-
+        screen.clear();
     }
 
     @Override
     public void draw(Graphics2D g2, Rectangle viewport) {
-        Rectangle rect = new Rectangle(0, 0, viewport.width, viewport.height);
-
-        g2.setColor(Color.WHITE);
-        g2.fillRect(0, 0, viewport.width, viewport.height);
-
-        g2.setColor(Color.BLACK);
-        GraphicUtils.centeredString(g2, rect, "Boiler Display - ID: %s".formatted(display.id()));
+        screen.draw(g2, viewport, displayId, null);
     }
 }

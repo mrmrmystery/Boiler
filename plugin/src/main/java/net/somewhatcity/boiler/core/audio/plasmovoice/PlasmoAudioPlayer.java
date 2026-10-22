@@ -85,7 +85,7 @@ public class PlasmoAudioPlayer implements IBoilerAudioPlayer {
 
     @Override
     public int getAudioQueueSize() {
-        return audioQueue.size();
+        return audioQueue == null ? 0 : audioQueue.size();
     }
 
     public void queue(short data) {

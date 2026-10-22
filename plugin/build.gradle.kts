@@ -17,6 +17,20 @@ repositories {
 }
 
 dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.mockito:mockito-core:5.15.2")
+    testImplementation("io.papermc.paper:paper-api:1.21.6-R0.1-SNAPSHOT")
+    testImplementation("de.pianoman911:mapengine-api:1.8.7")
+    testImplementation("org.bytedeco:javacv:1.5.10") { isTransitive = false }
+    testImplementation("org.bytedeco:ffmpeg:6.1.1-1.5.10")
+    val nativeOs = when {
+        System.getProperty("os.name").lowercase().contains("win") -> "windows"
+        System.getProperty("os.name").lowercase().contains("mac") -> "macosx"
+        else -> "linux"
+    }
+    val nativeArch = if (System.getProperty("os.arch") in listOf("aarch64", "arm64")) "arm64" else "x86_64"
+    testRuntimeOnly("org.bytedeco:javacpp:1.5.10:$nativeOs-$nativeArch")
+    testRuntimeOnly("org.bytedeco:ffmpeg:6.1.1-1.5.10:$nativeOs-$nativeArch")
     /*
     runtimeOnly(project(":platform-paper-1.20"))
     runtimeOnly(project(":platform-paper-1.20.2"))
@@ -49,6 +63,10 @@ dependencies {
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+        systemProperty("java.awt.headless", "true")
+    }
     shadowJar {
         destinationDirectory.set(rootProject.buildDir.resolve("libs"))
         archiveBaseName.set(rootProject.name)
@@ -65,6 +83,17 @@ tasks {
     assemble {
         dependsOn(shadowJar)
     }
+}
+
+tasks.register<JavaExec>("performanceBenchmark") {
+    group = "verification"
+    description = "Compare the original allocating raster adapter with the reusable adapter (no Minecraft server)."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("net.somewhatcity.boiler.core.RasterBenchmark")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+    jvmArgs("-Xms256m", "-Xmx512m", "-Djava.awt.headless=true")
+    args(rootProject.layout.buildDirectory.file("reports/performance/raster.csv").get().asFile.absolutePath)
 }
 
 bukkit {

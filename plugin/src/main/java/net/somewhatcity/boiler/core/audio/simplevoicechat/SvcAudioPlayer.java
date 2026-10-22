@@ -11,127 +11,79 @@
 package net.somewhatcity.boiler.core.audio.simplevoicechat;
 
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
-import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
 import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
 import de.maxhenkel.voicechat.api.opus.OpusEncoder;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerConfig;
-import net.somewhatcity.boiler.core.audio.simplevoicechat.BoilerVoicechatPlugin;
+import net.somewhatcity.boiler.core.BoilerPlugin;
+import net.somewhatcity.boiler.core.audio.PcmBuffer;
 import org.bukkit.Location;
 
 import java.util.*;
-import java.util.function.Supplier;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class SvcAudioPlayer {
-
     public static final VoicechatServerApi API = (VoicechatServerApi) BoilerVoicechatPlugin.voicechatApi();
-    private AudioPlayer audioPlayer;
-    private long position = 0;
-    private Queue<Short> audioQueue;
-    private List<LocationalAudioChannel> channels = new ArrayList<>();
-    private Timer playbackTimer = new Timer();
+    private final PcmBuffer audioQueue;
+    private final List<LocationalAudioChannel> channels = new ArrayList<>();
+    private final short[] block = new short[960];
+    private OpusEncoder encoder;
+    private ScheduledFuture<?> playbackTask;
+    private volatile long position;
+    private boolean stopped;
 
-    public SvcAudioPlayer(IBoilerDisplay display) {
-        audioQueue = new ArrayDeque<>();
-
-        if(display.speakers() == null || display.speakers().isEmpty()) {
-            LocationalAudioChannel channel = API.createLocationalAudioChannel(
-                    UUID.randomUUID(),
-                    API.fromServerLevel(display.cornerA().getWorld()),
-                    API.createPosition(display.center().getX(), display.center().getY(), display.center().getZ())
-            );
+    public SvcAudioPlayer(IBoilerDisplay display) { this(display, false); }
+    public SvcAudioPlayer(IBoilerDisplay display, boolean live) {
+        audioQueue = new PcmBuffer(live ? 24_000 : 48_000, live);
+        if (API == null) { audioQueue.close(); stopped = true; return; }
+        List<Location> speakers = display.speakers();
+        if (speakers.isEmpty()) speakers = List.of(display.center());
+        for (Location speaker : speakers) {
+            LocationalAudioChannel channel = API.createLocationalAudioChannel(UUID.randomUUID(),
+                    API.fromServerLevel(speaker.getWorld()), API.createPosition(speaker.getX(), speaker.getY(), speaker.getZ()));
+            channel.setCategory(BoilerConfig.svcChannelName);
+            channel.setDistance(display.settings().has("soundDistance") ? display.settings().get("soundDistance").getAsInt() : 100);
             channels.add(channel);
-        } else {
-            for(Location speaker : display.speakers()) {
-                LocationalAudioChannel channel = API.createLocationalAudioChannel(
-                        UUID.randomUUID(),
-                        API.fromServerLevel(speaker.getWorld()),
-                        API.createPosition(speaker.getX(), speaker.getY(), speaker.getZ())
-                );
-                channels.add(channel);
-            }
         }
-
-        if(channels.isEmpty()) {
-            return;
-        }
-
-        OpusEncoder encoder = API.createEncoder();
-
-        playbackTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                short[] data = new short[960];
-                short lastData = 0;
-                for(int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
-                    data[i] = Short.MIN_VALUE;
-                    Object o = audioQueue.poll();
-                    if(o != null) {
-                        data[i] = (short) o;
-                    }
-                }
-
-                byte[] encodedData = encoder.encode(data);
-
-                channels.forEach(ch -> {
-                    ch.send(encodedData);
-                });
-            }
-        }, 0, 20);
-
-        /*
-        channels.forEach(ch -> {
-            audioPlayer = API.createAudioPlayer(ch, API.createEncoder(), new Supplier<short[]>() {
-                @Override
-                public short[] get() {
-                    position += 20;
-                    //System.out.println("aq-size: %s".formatted(audioQueue.size()));
-                    short[] data = new short[960];
-                    short lastData = 0;
-                    for(int i = 0; i < 960 && !audioQueue.isEmpty(); i++) {
-                        data[i] = Short.MIN_VALUE;
-                        Object o = audioQueue.poll();
-                        if(o != null) {
-                            data[i] = (short) o;
-                        }
-                    }
-                    return data;
-                }
-            });
-            audioPlayer.startPlaying();
-        });
-
-         */
-
-        channels.forEach(ch -> ch.setCategory(BoilerConfig.svcChannelName));
-
-        if(display.settings().has("soundDistance")) {
-            channels.forEach(ch -> ch.setDistance(display.settings().get("soundDistance").getAsInt()));
-        } else {
-            channels.forEach(ch -> ch.setDistance(100));
-        }
+        encoder = API.createEncoder();
+        playbackTask = BoilerPlugin.getPlugin().runtime().audio().scheduleAtFixedRate(this::playBlock, 0, 20, TimeUnit.MILLISECONDS);
     }
-    public void queue(short data) {
-        audioQueue.add(data);
-    };
 
-    public void queue(byte[] data) {
-        short[] audio = API.getAudioConverter().bytesToShorts(data);
-        for(short s : audio) {
-            queue(s);
+    private synchronized void playBlock() {
+        if (stopped) return;
+        try {
+            audioQueue.read(block);
+            byte[] encoded = encoder.encode(block);
+            for (LocationalAudioChannel channel : channels) channel.send(encoded);
+            position += 20;
+        } catch (Exception e) {
+            BoilerPlugin.getPlugin().getLogger().log(Level.WARNING, "Audio playback stopped", e);
+            stop();
         }
     }
 
-    public int getAudioQueueSize() {
-        return audioQueue.size();
+    public void queue(short sample) { write(new short[]{sample}); }
+    public void queue(byte[] samples) {
+        if (API != null) write(API.getAudioConverter().bytesToShorts(samples));
     }
+    private void write(short[] samples) {
+        try { audioQueue.write(samples); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+    public int getAudioQueueSize() { return audioQueue.size(); }
+    public void clear() { audioQueue.clear(); }
     public void stop() {
-        if(audioPlayer != null) audioPlayer.stopPlaying();
-
-        if(playbackTimer != null) playbackTimer.cancel();
-    };
-
-    public long getPosition() {
-        return position;
+        // Wake producers before acquiring the encoder lock.
+        audioQueue.close();
+        synchronized (this) {
+            if (stopped) return;
+            stopped = true;
+            if (playbackTask != null) playbackTask.cancel(false);
+            if (encoder != null) encoder.close();
+            channels.clear();
+        }
     }
+    public long getPosition() { return position; }
 }

@@ -13,47 +13,47 @@ package net.somewhatcity.boiler.core.sources;
 import com.google.gson.JsonObject;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 import org.bukkit.Bukkit;
-
+import org.bukkit.scheduler.BukkitTask;
 import java.awt.*;
+import java.util.List;
 
 public class SystemInfoSource implements IBoilerSource {
-
-    @Override
-    public void load(IBoilerDisplay display, JsonObject data) {
-
+    private static final Font HEADING = new Font("Arial", Font.BOLD, 16);
+    private static final Font TEXT = new Font("Arial", Font.PLAIN, 12);
+    private volatile List<String> lines = List.of();
+    private BukkitTask refresh;
+    @Override public void load(IBoilerDisplay display, JsonObject data) {
+        BoilerPlugin plugin = BoilerPlugin.getPlugin();
+        refresh = plugin.callOnMain(() -> {
+            snapshot();
+            return Bukkit.getScheduler().runTaskTimer(plugin, this::snapshot, 20, 20);
+        });
     }
-
-    @Override
-    public void draw(Graphics2D g2, Rectangle viewport) {
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, viewport.width, viewport.height);
-
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Arial", Font.BOLD, 16));
-        g2.drawString("System Info", 10, 20);
-
-        g2.setFont(new Font("Arial", Font.PLAIN, 12));
-        g2.drawString("OS Name: " + System.getProperty("os.name"), 10, 40);
-        g2.drawString("OS Version: " + System.getProperty("os.version"), 10, 60);
-        g2.drawString("OS Architecture: " + System.getProperty("os.arch"), 10, 80);
-        g2.drawString("Java Version: " + System.getProperty("java.version"), 10, 100);
-
-        g2.drawString("Boiler Version: " + Bukkit.getPluginManager().getPlugin("boiler").getPluginMeta().getVersion(), 10, 120);
-        g2.drawString("MapEngine Version: " + Bukkit.getPluginManager().getPlugin("MapEngine").getPluginMeta().getVersion(), 10, 140);
-        //g2.drawString("MapEngine-MediaExt Version: " + Bukkit.getPluginManager().getPlugin("MapMediaExt").getPluginMeta().getVersion(), 10, 160);
-        g2.drawString("SimpleVoiceChat installed: " + Util.isPluginInstalled("voicechat"), 10, 180);
-        g2.drawString("PlasmoVoice installed: " + Util.isPluginInstalled("PlasmoVoice"), 10, 200);
-        g2.drawString("Gstreamer installed: " + Util.isGstreamerInstalled(), 10, 220);
+    private void snapshot() {
+        var mapEngine = Bukkit.getPluginManager().getPlugin("MapEngine");
+        lines = List.of(
+                "OS Name: " + System.getProperty("os.name"),
+                "OS Version: " + System.getProperty("os.version"),
+                "OS Architecture: " + System.getProperty("os.arch"),
+                "Java Version: " + System.getProperty("java.version"),
+                "Boiler Version: " + BoilerPlugin.getPlugin().getPluginMeta().getVersion(),
+                "MapEngine Version: " + (mapEngine == null ? "unavailable" : mapEngine.getPluginMeta().getVersion()),
+                "SimpleVoiceChat installed: " + Util.isPluginInstalled("voicechat"),
+                "PlasmoVoice installed: " + Util.isPluginInstalled("PlasmoVoice"),
+                "Gstreamer installed: " + Util.isGstreamerInstalled());
     }
-
-    @Override
-    public void unload() {
-
+    @Override public void draw(Graphics2D graphics, Rectangle viewport) {
+        graphics.setColor(Color.BLACK);
+        graphics.fillRect(0, 0, viewport.width, viewport.height);
+        graphics.setColor(Color.WHITE);
+        graphics.setFont(HEADING);
+        graphics.drawString("System Info", 10, 20);
+        graphics.setFont(TEXT);
+        List<String> snapshot = lines;
+        for (int i = 0; i < snapshot.size(); i++) graphics.drawString(snapshot.get(i), 10, 40 + i * 20 + (i >= 6 ? 20 : 0));
     }
-
-    private void text(String text) {
-
-    }
+    @Override public void unload() { if (refresh != null) refresh.cancel(); }
 }

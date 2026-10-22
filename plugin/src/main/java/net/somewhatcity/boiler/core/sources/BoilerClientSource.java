@@ -37,13 +37,14 @@ public class BoilerClientSource implements IBoilerSource {
     private IBoilerDisplay display;
     private Thread thread;
     private Process ffmpegProcess;
+    private boolean stopped;
 
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         this.display = display;
         String streamOut = display.rtspPublishUrl();
 
-        thread = new Thread(() -> {
+        thread = BoilerPlugin.getPlugin().runtime().startWorker("client-stream-" + display.id(), () -> {
             String sourceUrl = data.get("url").getAsString();
             String ffmpeg = Loader.load(org.bytedeco.ffmpeg.ffmpeg.class);
 
@@ -54,19 +55,31 @@ public class BoilerClientSource implements IBoilerSource {
             ProcessBuilder pb = new ProcessBuilder(args);
             try {
                 pb.inheritIO();
-                ffmpegProcess = pb.start();
-                int exitCode = ffmpegProcess.waitFor();
-                System.out.println("FFmpegProcess finished with exit code: " + exitCode);
-            } catch (IOException | InterruptedException e) {
-
+                Process process;
+                synchronized (this) {
+                    if (stopped) return;
+                    process = pb.start();
+                    ffmpegProcess = process;
+                }
+                process.waitFor();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (IOException e) {
+                BoilerPlugin.getPlugin().getLogger().warning("FFmpeg process failed: " + e.getMessage());
+            } finally {
+                synchronized (this) {
+                    if (ffmpegProcess != null && ffmpegProcess.isAlive()) ffmpegProcess.destroyForcibly();
+                }
             }
         });
-        thread.start();
     }
 
     @Override
-    public void unload() {
+    public synchronized void unload() {
+        if (stopped) return;
+        stopped = true;
         if(ffmpegProcess != null) {
+            ffmpegProcess.descendants().forEach(ProcessHandle::destroy);
             ffmpegProcess.destroy();
         }
 

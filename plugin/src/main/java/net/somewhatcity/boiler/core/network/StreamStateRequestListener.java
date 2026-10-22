@@ -22,15 +22,18 @@ import org.jetbrains.annotations.NotNull;
 public class StreamStateRequestListener implements PluginMessageListener {
     @Override
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, @NotNull byte[] message) {
-        ByteArrayDataInput in = ByteStreams.newDataInput(message);
-
-        int displayId = in.readInt();
-        MediaMtx.StreamState streamState = BoilerPlugin.getPlugin().mediaMtx().getStreamState("live/display_%s".formatted(displayId));
-
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeInt(displayId);
-        out.writeInt(streamState.ordinal());
-
-        player.sendPluginMessage(BoilerPlugin.getPlugin(), "boiler:stream_state_response", out.toByteArray());
+        if (message.length != Integer.BYTES) return;
+        BoilerPlugin plugin = BoilerPlugin.getPlugin();
+        if (plugin.stopping() || plugin.mediaMtx() == null) return;
+        int displayId = ByteStreams.newDataInput(message).readInt();
+        if (plugin.displayManager().display(displayId) == null) return;
+        plugin.mediaMtx().getStreamStateAsync("live/display_%s".formatted(displayId)).thenAccept(state ->
+                plugin.onMain(() -> {
+                    if (!player.isOnline()) return;
+                    ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                    out.writeInt(displayId);
+                    out.writeInt(state.ordinal());
+                    player.sendPluginMessage(plugin, "boiler:stream_state_response", out.toByteArray());
+                }));
     }
 }

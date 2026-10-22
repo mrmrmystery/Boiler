@@ -9,6 +9,7 @@
  */
 
 package net.somewhatcity.boiler.core.sources;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 
 import com.google.gson.JsonObject;
 import com.sun.jna.Platform;
@@ -41,212 +42,177 @@ import java.util.TimerTask;
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
 public class GstreamerSource implements IBoilerSource {
-
-    private Thread playbackThread;
+    private final Object frameLock = new Object();
+    private final Object overlayLock = new Object();
+    private volatile boolean stopped;
     private BAudioPlayer bap;
     private BufferedImage currentImage;
+    private BufferedImage overlay;
     private PlayBin playbin;
-    private JPanel panel = new JPanel();
+    private AppSink videoSink;
+    private AppSink audioSink;
+    private JPanel panel;
     private Timer timer;
-    private long lastInteraction;
+    private volatile long lastInteraction;
+    private boolean updatingPosition;
+    private CToggleButton loopButton;
+    private CSlider position;
 
-    @Override
-    public void load(IBoilerDisplay display, JsonObject data) {
-        if(Platform.isWindows() || Platform.isMac()) GstreamerUtils.configurePaths();
+    @Override public void load(IBoilerDisplay display, JsonObject data) {
+        if (!Util.ensureGstreamer()) throw new IllegalStateException("GStreamer unavailable");
+        bap = BoilerPlugin.getPlugin().callOnMain(() -> new BAudioPlayer(display));
+        try { EventQueue.invokeAndWait(() -> setupControls(display)); }
+        catch (Exception e) { throw new IllegalStateException(e); }
+        videoSink = new AppSink("BoilerVideo-" + display.id());
+        videoSink.set("emit-signals", true);
+        videoSink.set("max-buffers", 2);
+        videoSink.set("drop", true);
+        videoSink.setCaps(Caps.fromString("video/x-raw,format=BGRx"));
+        videoSink.connect((AppSink.NEW_SAMPLE) sink -> {
+            Sample sample = sink.pullSample();
+            if (sample == null) return FlowReturn.OK;
+            Buffer buffer = null;
+            boolean mapped = false;
+            try {
+                if (stopped) return FlowReturn.OK;
+                Structure caps = sample.getCaps().getStructure(0);
+                int width = caps.getInteger("width"), height = caps.getInteger("height");
+                buffer = sample.getBuffer();
+                ByteBuffer bytes = buffer.map(false);
+                if (bytes == null) return FlowReturn.OK;
+                mapped = true;
+                synchronized (frameLock) {
+                    if (currentImage == null || currentImage.getWidth() != width || currentImage.getHeight() != height)
+                        currentImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+                    int stride = bytes.remaining() / height;
+                    BgrxFrames.copy(bytes, currentImage, stride);
+                }
+                return FlowReturn.OK;
+            } finally {
+                if (mapped) buffer.unmap();
+                sample.dispose();
+            }
+        });
+        audioSink = new AppSink("BoilerAudio-" + display.id());
+        audioSink.set("emit-signals", true);
+        audioSink.set("max-buffers", 4);
+        audioSink.setCaps(Caps.fromString("audio/x-raw,format=S16LE,channels=1,rate=48000"));
+        audioSink.connect((AppSink.NEW_SAMPLE) sink -> {
+            Sample sample = sink.pullSample();
+            if (sample == null) return FlowReturn.OK;
+            Buffer buffer = null;
+            boolean mapped = false;
+            try {
+                if (stopped) return FlowReturn.OK;
+                buffer = sample.getBuffer();
+                ByteBuffer bytes = buffer.map(false);
+                if (bytes == null) return FlowReturn.OK;
+                mapped = true;
+                byte[] samples = new byte[bytes.remaining()];
+                bytes.get(samples);
+                bap.play(samples);
+                return FlowReturn.OK;
+            } finally {
+                if (mapped) buffer.unmap();
+                sample.dispose();
+            }
+        });
+        playbin = new PlayBin("BoilerPlayer-" + display.id());
+        playbin.setVideoSink(videoSink);
+        playbin.setAudioSink(audioSink);
+        playbin.getBus().connect((Bus.EOS) source -> EventQueue.invokeLater(() -> {
+            if (stopped) return;
+            if (loopButton.isSelected()) playbin.seekSimple(Format.TIME, EnumSet.of(SeekFlags.FLUSH), 0);
+            else { playbin.stop(); updatingPosition = true; position.setValue(0); updatingPosition = false; }
+        }));
+        try { playbin.setURI(new URI(data.get("url").getAsString())); }
+        catch (URISyntaxException e) { throw new IllegalArgumentException(e); }
+        playbin.play();
+    }
 
-        Gst.init("boiler_display_" + display.id());
-        bap = new BAudioPlayer(display);
-
-        Dimension dimension = new Dimension(display.width(), display.height());
-
-        panel.setSize(dimension);
-        panel.setMinimumSize(dimension);
-        panel.setMaximumSize(dimension);
-        panel.setPreferredSize(dimension);
+    private void setupControls(IBoilerDisplay display) {
+        if (stopped) return;
+        panel = new JPanel();
+        panel.setSize(display.width(), display.height());
         panel.setLayout(null);
-        panel.setBackground(new Color(0, 0, 0, 0));
-
-        JToolBar toolBar = new JToolBar();
-        toolBar.setLayout(new FlowLayout(FlowLayout.LEFT));
-
-        CButton playButton = new CButton("play");
-        playButton.addActionListener(e -> playbin.play());
-        playButton.setBounds(10, display.height() - 40, 50, 30);
-        panel.add(playButton);
-
-
-        CButton pauseButton = new CButton("pause");
-        pauseButton.addActionListener(e -> playbin.pause());
-        pauseButton.setBounds(70, display.height() - 40, 50, 30);
-        panel.add(pauseButton);
-
-        CToggleButton loopButton = new CToggleButton("loop", true);
+        panel.setOpaque(false);
+        CButton play = new CButton("play");
+        play.addActionListener(e -> { if (!stopped && playbin != null) playbin.play(); });
+        play.setBounds(10, display.height() - 40, 50, 30);
+        panel.add(play);
+        CButton pause = new CButton("pause");
+        pause.addActionListener(e -> { if (!stopped && playbin != null) playbin.pause(); });
+        pause.setBounds(70, display.height() - 40, 50, 30);
+        panel.add(pause);
+        loopButton = new CToggleButton("loop", true);
         loopButton.setBounds(130, display.height() - 40, 50, 30);
         panel.add(loopButton);
-
-
-        CSlider position = new CSlider(0, 1000, 0);
+        position = new CSlider(0, 1000, 0);
         position.addChangeListener(e -> {
-            long dur = playbin.queryDuration(Format.TIME);
-            if (dur > 0) {
-                double relPos = position.getValue() / 1000.0;
-                playbin.seekSimple(Format.TIME,
-                        EnumSet.of(SeekFlags.FLUSH),
-                        (long) (relPos * dur));
-            }
+            if (updatingPosition || stopped || playbin == null) return;
+            long duration = playbin.queryDuration(Format.TIME);
+            if (duration > 0) playbin.seekSimple(Format.TIME, EnumSet.of(SeekFlags.FLUSH), (long) (position.getValue() / 1000.0 * duration));
         });
         position.setBounds(190, display.height() - 40, display.width() - 200, 30);
         panel.add(position);
-
-        timer = new Timer(500, e -> {
-            if (!position.getValueIsAdjusting()) {
-                if(playbin != null) {
-                    long dur = playbin.queryDuration(Format.TIME);
-                    long pos = playbin.queryPosition(Format.TIME);
-
-                    if (dur > 0) {
-                        double relPos = (double) pos / dur;
-                        position.setValue((int) (relPos * 1000));
-                    }
+        panel.doLayout();
+        overlay = new BufferedImage(display.width(), display.height(), BufferedImage.TYPE_INT_ARGB);
+        timer = new Timer(100, e -> {
+            if (stopped || System.currentTimeMillis() - lastInteraction >= 5000) return;
+            if (!position.getValueIsAdjusting() && playbin != null) {
+                long duration = playbin.queryDuration(Format.TIME);
+                if (duration > 0) {
+                    updatingPosition = true;
+                    try { position.setValue((int) (playbin.queryPosition(Format.TIME) * 1000.0 / duration)); }
+                    finally { updatingPosition = false; }
                 }
             }
+            paintOverlay();
         });
         timer.start();
+    }
 
-        panel.doLayout();
-        panel.validate();
-
-        playbackThread = new Thread(() -> {
-            AppSink videoSink = new AppSink("GstVideoComponent");
-            videoSink.set("emit-signals", true);
-            videoSink.setCaps(Caps.fromString("video/x-raw,format=BGRx"));
-            videoSink.connect(new AppSink.NEW_SAMPLE() {
-                @Override
-                public FlowReturn newSample(AppSink appSink) {
-                    Sample sample = appSink.pullSample();
-                    Structure capsStruct = sample.getCaps().getStructure(0);
-
-                    int width = capsStruct.getInteger("width");
-                    int height = capsStruct.getInteger("height");
-
-                    Buffer buffer = sample.getBuffer();
-                    ByteBuffer bb = buffer.map(false);
-
-                    BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-                    for (int y = 0; y < height; y++) {
-                        for (int x = 0; x < width; x++) {
-                            int index = y * width * 4 + x * 4;
-                            int b = bb.get(index) & 0xFF;
-                            int g = bb.get(index + 1) & 0xFF;
-                            int r = bb.get(index + 2) & 0xFF;
-                            int rgb = (r << 16) | (g << 8) | b;
-                            img.setRGB(x, y, rgb);
-                        }
-                    }
-
-                    currentImage = img;
-
-                    buffer.unmap();
-                    sample.dispose();
-
-                    return FlowReturn.OK;
-                }
-            });
-
-            AppSink audioSink = new AppSink("GstAudioComponent");
-            audioSink.set("emit-signals", true);
-            audioSink.setCaps(Caps.fromString("audio/x-raw,format=S16LE,channels=1,rate=48000"));
-            audioSink.connect(new AppSink.NEW_SAMPLE() {
-                @Override
-                public FlowReturn newSample(AppSink appSink) {
-                    Sample sample = appSink.pullSample();
-                    Buffer buffer = sample.getBuffer();
-                    ByteBuffer bb = buffer.map(false);
-
-                    byte[] audioData = new byte[bb.remaining()];
-                    bb.get(audioData);
-
-                    bap.play(audioData);
-
-                    buffer.unmap();
-                    sample.dispose();
-
-                    return FlowReturn.OK;
-                }
-            });
-
-            playbin = new PlayBin("playbin");
-            playbin.setVideoSink(videoSink);
-            playbin.setAudioSink(audioSink);
-
-            playbin.getBus().connect((Bus.EOS) source -> {
-                EventQueue.invokeLater(() -> {
-                    if (loopButton.isSelected()) {
-                        playbin.seekSimple(Format.TIME,
-                                EnumSet.of(SeekFlags.FLUSH),
-                                0);
-                    } else {
-                        playbin.stop();
-                        position.setValue(0);
-                    }
-                });
-            });
-
+    private void paintOverlay() {
+        synchronized (overlayLock) {
+            Graphics2D graphics = overlay.createGraphics();
             try {
-                playbin.setURI(new URI(data.get("url").getAsString()));
-                playbin.play();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
+                graphics.setComposite(AlphaComposite.Clear);
+                graphics.fillRect(0, 0, overlay.getWidth(), overlay.getHeight());
+                graphics.setComposite(AlphaComposite.SrcOver);
+                if (System.currentTimeMillis() - lastInteraction < 5000) panel.paint(graphics);
+            } finally { graphics.dispose(); }
+        }
+    }
 
-            Gst.main();
+    @Override public void draw(Graphics2D graphics, Rectangle viewport) {
+        synchronized (frameLock) { graphics.drawImage(currentImage, 0, 0, viewport.width, viewport.height, null); }
+        synchronized (overlayLock) {
+            // The EDT owns Swing; rendering consumes only its raster snapshot.
+            if (System.currentTimeMillis() - lastInteraction < 5000) graphics.drawImage(overlay, 0, 0, null);
+        }
+    }
 
+    @Override public void onClick(CommandSender sender, int x, int y, boolean right) {
+        EventQueue.invokeLater(() -> {
+            if (stopped) return;
+            lastInteraction = System.currentTimeMillis();
+            Component clicked = panel.getComponentAt(x, y);
+            if (clicked instanceof AbstractButton button) button.doClick(0);
+            else if (clicked instanceof JSlider slider) slider.setValue((int) Util.map(x - slider.getX() - 7, 0, slider.getWidth() - 14, 0, slider.getMaximum()));
+            paintOverlay();
         });
-        playbackThread.start();
     }
 
-    @Override
-    public void draw(Graphics2D g2, Rectangle viewport) {
-        g2.drawImage(currentImage, 0, 0, viewport.width, viewport.height, null);
-
-        if(System.currentTimeMillis() - lastInteraction < 5000) {
-            panel.paint(g2);
-        }
-    }
-
-    @Override
-    public void onClick(CommandSender sender, int x, int y, boolean right) {
-        lastInteraction = System.currentTimeMillis();
-
-        Component clicked = panel.getComponentAt(x, y);
-
-
-        if(clicked instanceof JButton button) {
-            button.doClick(100);
-        } else if(clicked instanceof JCheckBox checkBox) {
-            checkBox.doClick(100);
-        } else if(clicked instanceof JRadioButton radioButton) {
-            radioButton.doClick(100);
-        } else if(clicked instanceof JToggleButton toggleButton) {
-            toggleButton.doClick(100);
-        } else if(clicked instanceof JSlider slider) {
-            int clickPos = x - slider.getBounds().x - 7;
-            int sliderWidth = slider.getBounds().width - 14;
-            slider.setValue((int) Util.map(clickPos, 0, sliderWidth, 0, slider.getMaximum()));
-        }
-    }
-
-    @Override
-    public void unload() {
-
-        if(playbin != null) {
-            playbin.stop();
-            playbin.dispose();
-        }
-        if(bap != null) bap.stop();
-        if(timer != null) timer.stop();
-
-        if(playbackThread != null) playbackThread.interrupt();
+    @Override public void unload() {
+        if (stopped) return;
+        stopped = true;
+        if (bap != null) bap.stop(); // release blocked native audio callbacks before stopping the pipeline
+        EventQueue.invokeLater(() -> { if (timer != null) timer.stop(); });
+        if (playbin != null) { playbin.stop(); playbin.dispose(); }
+        if (videoSink != null) videoSink.dispose();
+        if (audioSink != null) audioSink.dispose();
+        synchronized (frameLock) { currentImage = null; }
+        synchronized (overlayLock) { overlay = null; }
     }
 
     public static class CButton extends JButton {
@@ -255,12 +221,9 @@ public class GstreamerSource implements IBoilerSource {
             super(text);
             addActionListener(e -> {
                 pressed = true;
-                new java.util.Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        pressed = false;
-                    }
-                }, 100);
+                javax.swing.Timer reset = new javax.swing.Timer(100, event -> pressed = false);
+                reset.setRepeats(false);
+                reset.start();
             });
         }
 

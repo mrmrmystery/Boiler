@@ -23,45 +23,49 @@ import org.bukkit.Bukkit;
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "id", type = CommandArgumentType.INTEGER)
 })
-public class CloneSource implements IBoilerSource {
+public class CloneSource implements IBoilerSource, CancellableLoad {
 
+    private volatile boolean stopped;
+    private volatile boolean attached;
     private IBoilerDisplay display;
     private IBoilerDisplay toClone;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
-        Bukkit.getScheduler().scheduleSyncDelayedTask(BoilerPlugin.getPlugin(), () -> {
-            new Thread(() -> {
-                this.display = display;
-                int cloneId = data.get("id").getAsInt();
-                toClone = BoilerPlugin.getPlugin().displayManager().display(cloneId);
-
-                if(display.width() != toClone.width() || display.height() != toClone.height()) {
-
-                    JsonObject err = new JsonObject();
-                    err.addProperty("message", "Displays must have the same dimensions");
-                    display.source("error", err);
-                    return;
-                }
-
-                display.renderPaused(true);
-                display.mapDisplay().cloneGroupIds(toClone.mapDisplay());
-
-                Bukkit.getOnlinePlayers().forEach(player -> {
-                    display.mapDisplay().mapId(player, 0);
-                });
-            }).start();
-        }, 10);
-    }
-
-    @Override
-    public void unload() {
-        display.mapDisplay().cutOffCloneGroupIds();
-        display.renderPaused(false);
-
-        Bukkit.getOnlinePlayers().forEach(player -> {
-            display.mapDisplay().mapId(player, 0);
+        this.display = display;
+        int cloneId = data.get("id").getAsInt();
+        BoilerPlugin.getPlugin().callOnMain(() -> {
+            if (stopped) return null;
+            toClone = BoilerPlugin.getPlugin().displayManager().display(cloneId);
+            if (toClone == null || toClone.id() == display.id() || display.width() != toClone.width() || display.height() != toClone.height()) {
+                JsonObject error = new JsonObject();
+                error.addProperty("message", "Clone target must exist and have the same dimensions");
+                display.source("error", error);
+                return null;
+            }
+            display.renderPaused(true);
+            display.mapDisplay().cloneGroupIds(toClone.mapDisplay());
+            attached = true;
+            Bukkit.getOnlinePlayers().forEach(player -> display.mapDisplay().mapId(player, 0));
+            return null;
         });
     }
+
+    @Override public void unload() {
+        stopped = true;
+        if (!attached || display == null) return;
+        Runnable detach = () -> {
+            if (attached) {
+                display.mapDisplay().cutOffCloneGroupIds();
+                display.renderPaused(false);
+                Bukkit.getOnlinePlayers().forEach(player -> display.mapDisplay().mapId(player, 0));
+                attached = false;
+            }
+        };
+        if (Bukkit.isPrimaryThread()) detach.run();
+        else BoilerPlugin.getPlugin().callOnMain(() -> { detach.run(); return null; });
+    }
+
+    @Override public void cancelLoad() { unload(); }
 
     @Override
     public void draw(IDrawingSpace drawingSpace) {

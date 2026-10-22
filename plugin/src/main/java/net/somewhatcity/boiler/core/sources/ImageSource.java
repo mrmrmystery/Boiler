@@ -30,8 +30,14 @@ import java.util.Base64;
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
-public class ImageSource implements IBoilerSource {
+public class ImageSource implements IBoilerSource, CancellableLoad {
     private BufferedImage image;
+    private volatile okhttp3.Call call;
+    private volatile boolean cancelled;
+    @Override public void cancelLoad() {
+        cancelled = true;
+        if (call != null) call.cancel();
+    }
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
         JsonObject obj = new JsonObject();
@@ -62,7 +68,13 @@ public class ImageSource implements IBoilerSource {
                     image = ImageIO.read(bais);
 
                 } else {
-                    image = ImageIO.read(new URL(url));
+                    call = net.somewhatcity.boiler.core.BoilerPlugin.getPlugin().runtime().http().newCall(new okhttp3.Request.Builder().url(url).build());
+                    if (cancelled || Thread.currentThread().isInterrupted()) call.cancel();
+                    try (okhttp3.Response response = call.execute()) {
+                        if (!response.isSuccessful() || response.body() == null) throw new IOException("Image request failed: " + response.code());
+                        image = ImageIO.read(response.body().byteStream());
+                    }
+                    if (image == null) throw new IOException("Unsupported image format");
 
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     boolean success = ImageIO.write(image, "jpg", baos);
@@ -81,6 +93,7 @@ public class ImageSource implements IBoilerSource {
 
     @Override
     public void unload() {
+        cancelLoad();
 
     }
 

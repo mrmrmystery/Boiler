@@ -30,9 +30,10 @@ import java.io.File;
 })
 public class VideoConverterSource implements IBoilerSource {
 
-    private boolean running = true;
-    private int totalFrames;
-    private int currentFrame = 0;
+    private volatile boolean running = true;
+    private Thread worker;
+    private volatile int totalFrames;
+    private volatile int currentFrame = 0;
 
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
@@ -59,52 +60,44 @@ public class VideoConverterSource implements IBoilerSource {
 
         outputFile.getParentFile().mkdirs();
 
-        new Thread(() -> {
+        worker = net.somewhatcity.boiler.core.BoilerPlugin.getPlugin().runtime().startWorker("convert-" + display.id(), () -> {
+            java.nio.file.Path temporary = null;
             try {
-                FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(url);
-                grabber.start();
-
-                totalFrames = grabber.getLengthInFrames();
-
-                FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(output, display.width(), display.height(), 1);
-                recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
-                recorder.setAudioCodec(avcodec.AV_CODEC_ID_OPUS);
-                recorder.setAudioBitrate(96000);
-                recorder.setSampleRate(48000);
-                recorder.setFormat("mp4");
-                recorder.setFrameRate(30);
-                recorder.start();
-
-                while (running) {
-                    try {
+                temporary = java.nio.file.Files.createTempFile(outputFile.toPath().getParent(), "converting-", ".mp4");
+                try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(url);
+                     FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(temporary.toString(), display.width(), display.height(), 1)) {
+                    grabber.setTimeout(5000);
+                    grabber.setOption("rw_timeout", "5000000");
+                    grabber.start();
+                    totalFrames = grabber.getLengthInFrames();
+                    recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
+                    recorder.setAudioCodec(avcodec.AV_CODEC_ID_OPUS);
+                    recorder.setAudioBitrate(96000);
+                    recorder.setSampleRate(48000);
+                    recorder.setFormat("mp4");
+                    recorder.setFrameRate(30);
+                    recorder.start();
+                    while (running && !Thread.currentThread().isInterrupted()) {
                         Frame frame = grabber.grab();
-                        if(frame == null) {
-                            break;
-                        }
+                        if (frame == null) break;
                         recorder.record(frame);
-                        if(frame.image != null) currentFrame++;
-                    } catch (FFmpegFrameGrabber.Exception | FFmpegFrameRecorder.Exception e) {
-                        e.printStackTrace();
-                        break;
+                        if (frame.image != null) currentFrame++;
                     }
                 }
-
-                recorder.stop();
-                grabber.stop();
-                recorder.release();
-                grabber.release();
-
+                if (!running || Thread.currentThread().isInterrupted()) return;
+                try { java.nio.file.Files.move(temporary, outputFile.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+                catch (java.nio.file.AtomicMoveNotSupportedException e) { java.nio.file.Files.move(temporary, outputFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
                 JsonObject load = new JsonObject();
                 load.addProperty("url", output);
                 load.addProperty("buffer", 10);
                 load.addProperty("keepLastSourceData", false);
                 display.source("ffmpeg-buffered", load);
-
-            } catch (FFmpegFrameGrabber.Exception | FFmpegFrameRecorder.Exception e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                if (running) net.somewhatcity.boiler.core.BoilerPlugin.getPlugin().getLogger().warning("Video conversion failed: " + e.getMessage());
+            } finally {
+                if (temporary != null) try { java.nio.file.Files.deleteIfExists(temporary); } catch (java.io.IOException ignored) { }
             }
-
-        }).start();
+        });
 
     }
 
@@ -121,5 +114,6 @@ public class VideoConverterSource implements IBoilerSource {
     @Override
     public void unload() {
         running = false;
+        if (worker != null) worker.interrupt();
     }
 }

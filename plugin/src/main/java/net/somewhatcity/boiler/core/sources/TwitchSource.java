@@ -11,6 +11,7 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import com.google.gson.JsonParser;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
 import net.somewhatcity.boiler.api.CreateArgument;
@@ -35,22 +36,31 @@ import java.util.concurrent.Executors;
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
-public class TwitchSource implements IBoilerSource {
+public class TwitchSource implements IBoilerSource, CancellableLoad {
+    private volatile okhttp3.Call call;
+    private volatile boolean cancelled;
+    @Override public void cancelLoad() {
+        cancelled = true;
+        if (call != null) call.cancel();
+    }
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = BoilerPlugin.getPlugin().runtime().http();
 
         Request request = new Request.Builder()
                 .url("https://pwn.sh/tools/streamapi.py?url=%s".formatted(data.get("url").getAsString()))
                 .get()
                 .build();
 
-        try(Response response = client.newCall(request).execute()) {
+        call = client.newCall(request);
+            if (cancelled || Thread.currentThread().isInterrupted()) call.cancel();
+            try(Response response = call.execute()) {
             JsonObject obj = (JsonObject) JsonParser.parseString(response.body().string());
             String streamUrl = obj.getAsJsonObject("urls").get("480p").getAsString();
             JsonObject load = new JsonObject();
             load.addProperty("url", streamUrl);
             load.addProperty("buffer", 100);
+            load.addProperty("live", true);
             display.source("ffmpeg-buffered", load);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -59,6 +69,7 @@ public class TwitchSource implements IBoilerSource {
 
     @Override
     public void unload() {
+        cancelLoad();
 
     }
 

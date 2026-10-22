@@ -24,6 +24,7 @@ public final class BoilerCommand {
         return Commands.literal("boiler")
                 .then(new HelpCommand().build())
                 .then(new DisplayCommand(plugin).build())
+                .then(new RemoteCommand(plugin).build())
                 .then(new UpdateIntervalCommand(plugin).build())
                 .then(new BoilerClientCommand(plugin).build())
                 .then(new InfoCommand(plugin).build())

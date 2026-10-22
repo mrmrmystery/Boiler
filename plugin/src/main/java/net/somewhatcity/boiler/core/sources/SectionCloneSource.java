@@ -31,38 +31,35 @@ public class SectionCloneSource implements IBoilerSource {
 
     private IBoilerDisplay display;
     private IBoilerDisplay toClone;
+    private final net.somewhatcity.boiler.core.display.RasterRenderer raster = new net.somewhatcity.boiler.core.display.RasterRenderer();
 
     private int x;
     private int y;
 
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
-        Bukkit.getScheduler().scheduleSyncDelayedTask(BoilerPlugin.getPlugin(), () -> {
-            new Thread(() -> {
-                this.display = display;
-                int cloneId = data.get("id").getAsInt();
-                x = data.get("x").getAsInt();
-                y = data.get("y").getAsInt();
-                toClone = BoilerPlugin.getPlugin().displayManager().display(cloneId);
-            }).start();
-        }, 10);
+        this.display = display;
+        x = data.get("x").getAsInt();
+        y = data.get("y").getAsInt();
+        toClone = BoilerPlugin.getPlugin().displayManager().display(data.get("id").getAsInt());
+        if (toClone == null || toClone.id() == display.id() || x < 0 || y < 0 || (long) x + display.width() > toClone.width() || (long) y + display.height() > toClone.height())
+            throw new IllegalArgumentException("Invalid section clone target or bounds");
+
     }
 
     @Override
     public void unload() {
+        raster.clear();
 
     }
 
     @Override
     public void draw(Graphics2D g2, Rectangle viewport) {
-        if(toClone.source() != null) {
-            BufferedImage snapshot = new BufferedImage(toClone.width(), toClone.height(), BufferedImage.TYPE_INT_ARGB);
-            Graphics2D snapg = snapshot.createGraphics();
-            toClone.source().draw(snapg, toClone.viewport());
-            snapg.dispose();
-            g2.drawImage(snapshot.getSubimage(x, y, display.width(), display.height()), 0, 0, null);
+        if (toClone instanceof net.somewhatcity.boiler.core.display.ImplBoilerDisplay target) {
+            target.drawSection(g2, x, y, display.width(), display.height());
+        } else if (toClone != null && toClone.source() != null) {
+            BufferedImage snapshot = raster.drawImage(toClone.source(), toClone.width(), toClone.height());
+            g2.drawImage(snapshot, 0, 0, display.width(), display.height(), x, y, x + display.width(), y + display.height(), null);
         }
-
     }
-
 }

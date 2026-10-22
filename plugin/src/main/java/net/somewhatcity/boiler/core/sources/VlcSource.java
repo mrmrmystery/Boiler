@@ -46,6 +46,8 @@ import java.nio.IntBuffer;
 })
 public class VlcSource implements IBoilerSource {
 
+    private final Object frameLock = new Object();
+    private MediaPlayerFactory factory;
     private BufferedImage image;
     private int width = 720;
     private int height = 480;
@@ -57,11 +59,11 @@ public class VlcSource implements IBoilerSource {
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
 
-        bap = new BAudioPlayer(display);
+        bap = BoilerPlugin.getPlugin().callOnMain(() -> new BAudioPlayer(display));
         image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         image.setAccelerationPriority(1.0f);
 
-        MediaPlayerFactory factory = new MediaPlayerFactory();
+        factory = new MediaPlayerFactory();
 
         mediaPlayer = factory.mediaPlayers().newEmbeddedMediaPlayer();
 
@@ -74,13 +76,15 @@ public class VlcSource implements IBoilerSource {
 
     @Override
     public void unload() {
-        if(mediaPlayer != null) mediaPlayer.release();
         if(bap != null) bap.stop();
+        if(mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
+        if(factory != null) { factory.release(); factory = null; }
+        synchronized (frameLock) { image = null; }
     }
 
     @Override
     public void draw(Graphics2D g2, Rectangle viewport) {
-        g2.drawImage(image, 0, 0, viewport.width, viewport.height, null);
+        synchronized (frameLock) { g2.drawImage(image, 0, 0, viewport.width, viewport.height, null); }
     }
 
     private final class BoilerVlcAudioCallback extends AudioCallbackAdapter {
@@ -98,8 +102,11 @@ public class VlcSource implements IBoilerSource {
         public void display(MediaPlayer mediaPlayer, ByteBuffer[] byteBuffers, BufferFormat bufferFormat) {
             ByteBuffer bb = byteBuffers[0];
             IntBuffer ib = bb.asIntBuffer();
-            ib.get(rgbBuffer);
-            image.setRGB(0, 0, width, height, rgbBuffer, 0, width);
+            synchronized (frameLock) {
+                if (image == null) return;
+                ib.get(rgbBuffer);
+                image.setRGB(0, 0, width, height, rgbBuffer, 0, width);
+            }
         }
     }
 

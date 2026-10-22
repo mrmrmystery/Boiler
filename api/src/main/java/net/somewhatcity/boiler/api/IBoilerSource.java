@@ -43,7 +43,11 @@ public interface IBoilerSource {
         IDisplay display = drawingSpace.ctx().getDisplay();
         BufferedImage img = new BufferedImage(display.pixelWidth(), display.pixelHeight(), BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
-        draw(g, new Rectangle(0, 0, display.pixelWidth(), display.pixelHeight()));
+        try {
+            draw(g, new Rectangle(0, 0, display.pixelWidth(), display.pixelHeight()));
+        } finally {
+            g.dispose();
+        }
         drawingSpace.image(img, 0, 0);
     }
 

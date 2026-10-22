@@ -20,49 +20,36 @@ import java.util.HashMap;
 public class MediaMtxAuthServer {
 
     private Javalin app;
-    private static HashMap<String, String> credentials = new HashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, String> credentials = new java.util.concurrent.ConcurrentHashMap<>();
 
     public MediaMtxAuthServer() {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         Thread.currentThread().setContextClassLoader(BoilerPlugin.class.getClassLoader());
-        app = Javalin.create().start(7000);
-        Thread.currentThread().setContextClassLoader(classLoader);
+        try { app = Javalin.create().start(7000); }
+        finally { Thread.currentThread().setContextClassLoader(classLoader); }
 
         app.exception(Exception.class, (e, context) -> {
             e.printStackTrace();
         });
 
         app.post("/auth", ctx -> {
-            String body = ctx.body();
-            System.out.println(body);
-
-            try {
-                JsonObject json = (JsonObject) JsonParser.parseString(body);
-            } catch (JsonSyntaxException e) {
-                System.out.println("Invalid JSON format: " + e.getMessage());
-                ctx.status(400).result("Invalid JSON");
-                return;
-            }
-
-            JsonObject json = (JsonObject) JsonParser.parseString(body);
-            System.out.println("parsed");
+            JsonObject json;
+            try { json = JsonParser.parseString(ctx.body()).getAsJsonObject(); }
+            catch (RuntimeException e) { ctx.status(400).result("Invalid JSON"); return; }
 
             String ip = json.get("ip").getAsString();
             String user = json.get("user").getAsString();
             String password = json.get("password").getAsString();
 
-            System.out.println("auth attempt with ip=%s user=%s password=%s".formatted(ip, user, password));
 
             if(ip.equals("::1")) {
                 ctx.status(200);
             }
             else {
-                if(credentials.containsKey(user) && credentials.get(user).equals(password)) {
-                    System.out.println("auth success");
+                if(password.equals(credentials.get(user))) {
                     ctx.status(200);
                 }
                 else {
-                    System.out.println("auth fail");
                     ctx.status(401);
                 }
             }
@@ -74,7 +61,10 @@ public class MediaMtxAuthServer {
         credentials.put(user, password);
     }
 
-    public void stop() {
-        app.stop();
+    public synchronized void stop() {
+        credentials.clear();
+        Javalin current = app;
+        app = null;
+        if (current != null) current.stop();
     }
 }

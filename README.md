@@ -7,6 +7,18 @@ https://modrinth.com/plugin/boiler
 All docs have been moved to the wiki tab
 https://github.com/mrmrmystery/Boiler/wiki
 
+## Performance and verification
+
+See [the performance report](docs/PERFORMANCE.md) for implementation details, the optional live-buffer mode, Java 21 build instructions, regression tests, measured raster allocations, and remaining server integration checks.
+
+## Remote control and SmartTV
+
+Give yourself a display-bound remote with `/boiler remote <displayId>` and activate the TV launcher with `/boiler display source <displayId> smarttv`. Hold the remote in your main hand: WASD navigates, jump confirms, and sneak returns to the sources menu. Change hotbar slots to release the movement lock. Looking around remains possible.
+
+SmartTV lists all public registered sources, asks for required parameters privately in chat, and remembers their values. See [the SmartTV guide](docs/SMARTTV.md) for permissions, parameter editing, lifecycle behavior, and verification.
+
+Displays of at least 3×2 or 2×3 maps use a webOS-inspired home screen with a sidebar, category shortcuts, an app dock, and recent sources. The Settings app edits all existing display options, including dithering, buffering, render period, distances, and orientation; it requires `boiler.command.settings`. Smaller displays retain a compact layout.
+
 ## Bundled CEF browser source
 
 The `browser` source runs Chromium off-screen on the server and sends its framebuffer to the map display. Create one with the normal source command and a URL, for example `browser https://example.com`. Click, cursor, scroll, and text events are forwarded to the page. Browser PCM is routed through Boiler's existing voice-chat speaker path.

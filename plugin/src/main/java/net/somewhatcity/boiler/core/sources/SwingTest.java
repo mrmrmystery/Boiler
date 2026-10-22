@@ -13,86 +13,94 @@ package net.somewhatcity.boiler.core.sources;
 import com.google.gson.JsonObject;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.util.Arrays;
-import java.util.UUID;
+import java.awt.event.ContainerAdapter;
+import java.awt.event.ContainerEvent;
+import java.awt.image.BufferedImage;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SwingTest implements IBoilerSource {
-
-    private JPanel panel = new DSPPipelinePanel();
-    private JFileChooser fileChooser;
-    private Player player;
-    private Dimension dimension;
-
+    private JPanel panel;
+    private final Object frameLock = new Object();
+    private final AtomicBoolean capturePending = new AtomicBoolean();
+    private volatile boolean stopped;
+    private boolean layoutDirty = true; // EDT only
+    private BufferedImage frame;
     private Point lastClick;
-    @Override
-    public void load(IBoilerDisplay display, JsonObject data) {
-        if(data.has("gui_player")) {
-            player = Bukkit.getPlayer(UUID.fromString(data.get("gui_player").getAsString()));
-        }
 
-        dimension = new Dimension(display.width(), display.height());
-
-        panel.setSize(dimension);
-        panel.setMinimumSize(dimension);
-        panel.setMaximumSize(dimension);
-        panel.setPreferredSize(dimension);
-
-
-        panel.revalidate();
-        panel.doLayout();
-        panel.revalidate();
+    @Override public void load(IBoilerDisplay display, JsonObject data) {
+        try {
+            EventQueue.invokeAndWait(() -> {
+                if (stopped) return;
+                panel = new DSPPipelinePanel();
+                panel.setSize(display.width(), display.height());
+                watch(panel);
+                capture();
+            });
+        } catch (Exception e) { throw new IllegalStateException(e); }
     }
 
-    @Override
-    public void draw(Graphics2D g2, Rectangle viewport) {
-        panel.setSize(dimension);
-        panel.doLayout();
-        panel.revalidate();
-        panel.validate();
-        panel.printAll(g2);
-    }
-
-    @Override
-    public void unload() {
-
-    }
-
-    @Override
-    public void onClick(CommandSender sender, int x, int y, boolean right) {
-        Component clicked = panel.getComponentAt(x, y);
-        lastClick = new Point(x, y);
-
-        if(clicked instanceof JButton button) {
-            button.doClick(50);
-        } else if(clicked instanceof JCheckBox checkBox) {
-            checkBox.doClick(50);
-        } else if(clicked instanceof JRadioButton radioButton) {
-            radioButton.doClick(50);
+    private void watch(Component component) {
+        component.addPropertyChangeListener(event -> {
+            String name = event.getPropertyName();
+            if ("font".equals(name) || "preferredSize".equals(name) || "visible".equals(name)) layoutDirty = true;
+        });
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) watch(child);
+            container.addContainerListener(new ContainerAdapter() {
+                @Override public void componentAdded(ContainerEvent event) { watch(event.getChild()); layoutDirty = true; }
+                @Override public void componentRemoved(ContainerEvent event) { layoutDirty = true; }
+            });
         }
     }
-
-    @Override
-    public void onInput(CommandSender sender, String input) {
-        Component selected = panel.getComponentAt(lastClick);
-
-        if(selected instanceof JTextField textField) {
-            textField.setText(input);
+    private void layout(Container container) {
+        container.doLayout();
+        for (Component child : container.getComponents()) if (child instanceof Container nested) layout(nested);
+    }
+    private void capture() {
+        if (stopped) return;
+        if (layoutDirty) { layout(panel); layoutDirty = false; }
+        synchronized (frameLock) {
+            if (frame == null || frame.getWidth() != panel.getWidth() || frame.getHeight() != panel.getHeight())
+                frame = new BufferedImage(panel.getWidth(), panel.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D graphics = frame.createGraphics();
+            try {
+                graphics.setComposite(AlphaComposite.Clear);
+                graphics.fillRect(0, 0, frame.getWidth(), frame.getHeight());
+                graphics.setComposite(AlphaComposite.SrcOver);
+                panel.printAll(graphics);
+            } finally { graphics.dispose(); }
         }
     }
-
-    @Override
-    public void onKey(CommandSender sender, String key) {
-        Component selected = panel.getComponentAt(lastClick);
-
-        if(selected instanceof JTextField textField) {
-            textField.setText(textField.getText() + key);
-        }
+    @Override public void draw(Graphics2D graphics, Rectangle viewport) {
+        if (!stopped && capturePending.compareAndSet(false, true)) EventQueue.invokeLater(() -> {
+            try { capture(); }
+            finally { capturePending.set(false); }
+        });
+        synchronized (frameLock) { graphics.drawImage(frame, 0, 0, null); }
+    }
+    @Override public void unload() {
+        stopped = true;
+        synchronized (frameLock) { frame = null; }
+    }
+    @Override public void onClick(CommandSender sender, int x, int y, boolean right) {
+        EventQueue.invokeLater(() -> {
+            if (stopped) return;
+            lastClick = new Point(x, y);
+            Component clicked = panel.getComponentAt(x, y);
+            if (clicked instanceof AbstractButton button) button.doClick(0);
+        });
+    }
+    @Override public void onInput(CommandSender sender, String input) {
+        EventQueue.invokeLater(() -> {
+            if (!stopped && lastClick != null && panel.getComponentAt(lastClick) instanceof JTextField field) field.setText(input);
+        });
+    }
+    @Override public void onKey(CommandSender sender, String key) {
+        EventQueue.invokeLater(() -> {
+            if (!stopped && lastClick != null && panel.getComponentAt(lastClick) instanceof JTextField field) field.setText(field.getText() + key);
+        });
     }
 }

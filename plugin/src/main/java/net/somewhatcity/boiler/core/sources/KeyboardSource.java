@@ -39,6 +39,9 @@ import java.util.Optional;
 public class KeyboardSource implements IBoilerSource {
 
     private BufferedImage currentFrame = null;
+    private boolean dirty = true;
+    private long nextRefresh = Long.MAX_VALUE;
+    private static final Font KEY_FONT = new Font("Arial", Font.PLAIN, 11);
     private int linkedId;
     private CommandSender lastInteractor;
     private String json;
@@ -57,11 +60,12 @@ public class KeyboardSource implements IBoilerSource {
         linkedId = data.get("link").getAsInt();
 
         try {
-            InputStream inputStream = BoilerPlugin.getPlugin().getResource("assets/keyboards/kb_layout_de.json");
+            try (InputStream inputStream = BoilerPlugin.getPlugin().getResource("assets/keyboards/kb_layout_de.json")) {
             if (inputStream == null) {
                 throw new IOException("Missing keyboard layout: assets/keyboards/kb_layout_de.json");
             }
             json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            }
 
             loadFromJson();
             renderKeyboard();
@@ -71,19 +75,24 @@ public class KeyboardSource implements IBoilerSource {
 
     }
 
-    public void loadFromJson() {
+    public synchronized void loadFromJson() {
+        dirty = true;
         keyboard = gson.fromJson(json, Keyboard.class);
     }
 
-    public void renderKeyboard() {
+    public synchronized void renderKeyboard() {
+        long now = System.currentTimeMillis();
+        nextRefresh = Long.MAX_VALUE;
+        dirty = false;
 
-        BufferedImage img = new BufferedImage(128 * 3, 128, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage img = currentFrame;
+        if (img == null) img = new BufferedImage(128 * 3, 128, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
 
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, img.getWidth(), img.getHeight());
 
-        g.setFont(new Font("Arial", Font.PLAIN, 11));
+        g.setFont(KEY_FONT);
 
         for(KeyboardKey key : keyboard.keys) {
             Rectangle rect = new Rectangle(key.bounds[0], key.bounds[1], key.bounds[2], key.bounds[3]);
@@ -92,7 +101,8 @@ public class KeyboardSource implements IBoilerSource {
             if (isActiveModifier(key.action)) {
                 bgColor = bgColor.brighter();
             }
-            if(System.currentTimeMillis() - key.lastPressed < 200) {
+            if(now - key.lastPressed < 200) {
+                nextRefresh = Math.min(nextRefresh, key.lastPressed + 200);
                 bgColor = bgColor.darker().darker();
             }
             g.setColor(bgColor);
@@ -127,12 +137,13 @@ public class KeyboardSource implements IBoilerSource {
     }
 
     @Override
-    public void draw(Graphics2D g2, Rectangle viewport) {
-        renderKeyboard();
+    public synchronized void draw(Graphics2D g2, Rectangle viewport) {
+        if (dirty || System.currentTimeMillis() >= nextRefresh) renderKeyboard();
         if(currentFrame != null) g2.drawImage(currentFrame, 0, 0, 128 * 3, 128, null);
     }
 
-    public void sendKeystroke(KeyboardKey key) {
+    public synchronized void sendKeystroke(KeyboardKey key) {
+        dirty = true;
         IBoilerDisplay display = BoilerPlugin.getPlugin().displayManager().display(linkedId);
         if(display == null || lastInteractor == null) return;
 
@@ -196,14 +207,14 @@ public class KeyboardSource implements IBoilerSource {
     }
 
     @Override
-    public void onClick(CommandSender sender, int x, int y, boolean right) {
+    public synchronized void onClick(CommandSender sender, int x, int y, boolean right) {
         lastInteractor = sender;
 
         for(KeyboardKey key : keyboard.keys) {
             Rectangle rect = new Rectangle(key.bounds[0], key.bounds[1], key.bounds[2], key.bounds[3]);
             if(rect.contains(x, y)) {
                 key.lastPressed = System.currentTimeMillis();
-                System.out.println("key: " + KeyEvent.getKeyText(key.action));
+                dirty = true;
                 sendKeystroke(key);
                 break;
             }

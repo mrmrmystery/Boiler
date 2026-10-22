@@ -11,6 +11,7 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import com.google.gson.JsonParser;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
@@ -34,10 +35,16 @@ import java.nio.charset.StandardCharsets;
         @CreateArgument(name = "quality", type = CommandArgumentType.STRING),
         @CreateArgument(name = "url", type = CommandArgumentType.GREEDY_STRING)
 })
-public class YoutubeSource implements IBoilerSource {
+public class YoutubeSource implements IBoilerSource, CancellableLoad {
+    private volatile okhttp3.Call call;
+    private volatile boolean cancelled;
+    @Override public void cancelLoad() {
+        cancelled = true;
+        if (call != null) call.cancel();
+    }
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = BoilerPlugin.getPlugin().runtime().http();
 
         try {
             URI uri = new URI(data.get("url").getAsString());
@@ -58,9 +65,11 @@ public class YoutubeSource implements IBoilerSource {
                     .post(body)
                     .build();
 
-            try(Response response = client.newCall(request).execute()) {
+            call = client.newCall(request);
+            if (cancelled || Thread.currentThread().isInterrupted()) call.cancel();
+            try(Response response = call.execute()) {
                 String res = response.body().string();
-                System.out.println(res);
+
                 JsonObject json = (JsonObject) JsonParser.parseString(res);
                 if(json.has("url")) {
                     String url = json.get("url").getAsString();
@@ -96,6 +105,7 @@ public class YoutubeSource implements IBoilerSource {
 
     @Override
     public void unload() {
+        cancelLoad();
 
     }
     @Override

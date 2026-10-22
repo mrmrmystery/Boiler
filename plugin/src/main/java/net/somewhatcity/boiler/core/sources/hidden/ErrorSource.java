@@ -13,43 +13,32 @@ package net.somewhatcity.boiler.core.sources.hidden;
 import com.google.gson.JsonObject;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
-import net.somewhatcity.boiler.api.util.GraphicUtils;
 
 import java.awt.*;
 
 public class ErrorSource implements IBoilerSource {
-    private IBoilerDisplay display;
-    private String error = "none";
+    private static final String FALLBACK_MESSAGE = "An unexpected error occurred while loading the source.";
+    private final StatusScreen screen = new StatusScreen();
+    private int displayId;
+    private String error = FALLBACK_MESSAGE;
     @Override
     public void load(IBoilerDisplay display, JsonObject data) {
-        this.display = display;
-        if(data == null) {
-            error = "Error while loading error";
-            return;
+        displayId = display.id();
+        error = FALLBACK_MESSAGE;
+        if (data != null && data.has("message") && data.get("message").isJsonPrimitive()) {
+            String message = data.get("message").getAsString();
+            if (!message.isBlank()) error = message;
         }
-        if(data.get("message") != null) error = data.get("message").getAsString();
+        screen.clear();
     }
 
     @Override
     public void unload() {
-
+        screen.clear();
     }
 
     @Override
     public void draw(Graphics2D g, Rectangle viewport) {
-        Rectangle heading = new Rectangle(0, 0, viewport.width, 20);
-
-        g.setColor(Color.RED);
-        g.fill(heading);
-        g.setColor(Color.BLACK);
-        GraphicUtils.centeredString(g, heading, "ERROR - Display #" + display.id());
-
-        Rectangle info = new Rectangle(0, 20, viewport.width, viewport.height - 20);
-        g.setColor(Color.BLACK);
-        g.fill(info);
-
-        g.setColor(Color.WHITE);
-        GraphicUtils.centeredString(g, info, error);
-
+        screen.draw(g, viewport, displayId, error);
     }
 }

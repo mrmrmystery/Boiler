@@ -19,44 +19,43 @@ import java.util.UUID;
 
 public class UpdateIntervalManager {
     private BoilerPlugin plugin;
-    private HashMap<UUID, Integer> intervals;
+    private java.util.concurrent.ConcurrentHashMap<UUID, Integer> intervals;
     public UpdateIntervalManager(BoilerPlugin plugin) {
         this.plugin = plugin;
-        this.intervals = new HashMap<>();
+        this.intervals = new java.util.concurrent.ConcurrentHashMap<>();
 
         load();
     }
     public int getInterval(Player player) {
-        if(!intervals.containsKey(player.getUniqueId())) return -1;
-        return intervals.get(player.getUniqueId());
+        return intervals.getOrDefault(player.getUniqueId(), -1);
     }
     public void setInterval(Player player, int interval) {
         if(interval == -1) intervals.remove(player.getUniqueId());
-        intervals.put(player.getUniqueId(), interval);
+        else intervals.put(player.getUniqueId(), interval);
         save();
     }
     public void load() {
         File file = new File(plugin.getDataFolder(), "intervals.ser");
         if(!file.exists()) return;
-        try {
-            FileInputStream fis = new FileInputStream(file);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            intervals = (HashMap<UUID, Integer>) ois.readObject();
-            ois.close();
-            fis.close();
+        try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(file))) {
+            Object stored = input.readObject();
+            if (!(stored instanceof java.util.Map<?, ?> values)) throw new StreamCorruptedException("Invalid interval data");
+            java.util.concurrent.ConcurrentHashMap<UUID, Integer> loaded = new java.util.concurrent.ConcurrentHashMap<>();
+            for (var entry : values.entrySet()) {
+                if (!(entry.getKey() instanceof UUID id) || !(entry.getValue() instanceof Integer value))
+                    throw new StreamCorruptedException("Invalid interval entry");
+                loaded.put(id, value);
+            }
+            intervals = loaded;
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
     public void save() {
         File file = new File(plugin.getDataFolder(), "intervals.ser");
-        try {
-            if(!file.exists()) file.createNewFile();
-            FileOutputStream fos = new FileOutputStream(new File(plugin.getDataFolder(), "intervals.ser"));
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-            oos.writeObject(intervals);
-            oos.close();
-            fos.close();
+        plugin.getDataFolder().mkdirs();
+        try (ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(file))) {
+            output.writeObject(new HashMap<>(intervals));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
