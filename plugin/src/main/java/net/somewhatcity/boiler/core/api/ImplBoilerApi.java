@@ -13,8 +13,10 @@ package net.somewhatcity.boiler.core.api;
 import net.somewhatcity.boiler.api.BoilerApi;
 import net.somewhatcity.boiler.api.IDisplayManager;
 import net.somewhatcity.boiler.api.ISourceManager;
+import net.somewhatcity.boiler.api.audio.IBoilerAudioPlayer;
+import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
-import org.bukkit.plugin.Plugin;
+import net.somewhatcity.boiler.core.audio.BAudioPlayer;
 
 public class ImplBoilerApi implements BoilerApi {
 
@@ -30,5 +32,10 @@ public class ImplBoilerApi implements BoilerApi {
     @Override
     public ISourceManager sourceManager() {
         return plugin.sourceManager();
+    }
+
+    @Override
+    public IBoilerAudioPlayer createAudioPlayer(IBoilerDisplay display) {
+        return new BAudioPlayer(display);
     }
 }

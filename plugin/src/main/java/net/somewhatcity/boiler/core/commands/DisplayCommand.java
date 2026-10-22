@@ -1,29 +1,31 @@
-/*
- * Copyright (c) 2023.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+/* Copyright (c) 2023. */
 
 package net.somewhatcity.boiler.core.commands;
 
-import dev.jorel.commandapi.CommandAPICommand;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.commands.display.*;
 
-public class DisplayCommand extends CommandAPICommand {
-    public DisplayCommand() {
-        super("display");
-        withSubcommand(new DisplayCreateCommand());
-        withSubcommand(new DisplayRemoveCommand());
-        withSubcommand(new DisplayListCommand());
-        withSubcommand(new DisplayIdentifyCommand());
-        withSubcommand(new DisplaySourceCommand());
-        withSubcommand(new DisplaySettingsCommand());
-        withSubcommand(new DisplayActionCommand());
-        withSubcommand(new DisplaySpeakerCommand());
-        withSubcommand(new DisplayInfoCommand());
+public final class DisplayCommand {
+
+    private final BoilerPlugin plugin;
+
+    public DisplayCommand(BoilerPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    public LiteralArgumentBuilder<CommandSourceStack> build() {
+        return Commands.literal("display")
+                .then(new DisplayCreateCommand(plugin).build())
+                .then(new DisplayRemoveCommand(plugin).build())
+                .then(new DisplayListCommand(plugin).build())
+                .then(new DisplayIdentifyCommand(plugin).build())
+                .then(new DisplaySourceCommand(plugin).build())
+                .then(new DisplaySettingsCommand(plugin).build())
+                .then(new DisplayActionCommand(plugin).build())
+                .then(new DisplaySpeakerCommand(plugin).build())
+                .then(new DisplayInfoCommand(plugin).build());
     }
 }

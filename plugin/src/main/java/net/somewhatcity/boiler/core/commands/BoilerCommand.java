@@ -10,16 +10,23 @@
 
 package net.somewhatcity.boiler.core.commands;
 
-import dev.jorel.commandapi.CommandAPICommand;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 
-public class BoilerCommand extends CommandAPICommand {
-    public BoilerCommand() {
-        super("boiler");
-        withSubcommand(new HelpCommand());
-        withSubcommand(new DisplayCommand());
-        withSubcommand(new UpdateIntervalCommand());
-        withSubcommand(new BoilerClientCommand());
-        withSubcommand(new InfoCommand());
-        register();
+public final class BoilerCommand {
+
+    private BoilerCommand() {
+    }
+
+    public static LiteralCommandNode<CommandSourceStack> create(BoilerPlugin plugin) {
+        return Commands.literal("boiler")
+                .then(new HelpCommand().build())
+                .then(new DisplayCommand(plugin).build())
+                .then(new UpdateIntervalCommand(plugin).build())
+                .then(new BoilerClientCommand(plugin).build())
+                .then(new InfoCommand(plugin).build())
+                .build();
     }
 }

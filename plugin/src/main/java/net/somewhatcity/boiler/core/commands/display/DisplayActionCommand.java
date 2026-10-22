@@ -1,69 +1,83 @@
-/*
- * Copyright (c) 2023.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+/* Copyright (c) 2023. */
 
 package net.somewhatcity.boiler.core.commands.display;
 
-import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.BooleanArgument;
-import dev.jorel.commandapi.arguments.GreedyStringArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.commands.BoilerArguments;
+import net.somewhatcity.boiler.core.commands.CommandContextUtil;
 
-import java.util.Collections;
+import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
+import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
+import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.StringArgumentType.getString;
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
-public class DisplayActionCommand extends CommandAPICommand {
-    public DisplayActionCommand() {
-        super("action");
-        withPermission("boiler.command.action");
-        withArguments(BoilerArguments.displayArgument("display"));
-        withSubcommand(new CommandAPICommand("click")
-                .withArguments(new IntegerArgument("x"))
-                .withArguments(new IntegerArgument("y"))
-                .withOptionalArguments(new BooleanArgument("rightClick"))
-                .executes((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+public final class DisplayActionCommand {
 
-                    int x = (int) args.get(1);
-                    int y = (int) args.get(2);
-                    boolean rightClick = false;
-                    if(args.get(3) != null) rightClick = (boolean) args.get(3);
+    private final BoilerPlugin plugin;
 
-                    display.onClick(sender, x, y, rightClick);
-                    Util.sendMsg(sender, "Executing click on display %s", display.id());
-                })
-        );
-        withSubcommand(new CommandAPICommand("input")
-                .withArguments(new GreedyStringArgument("string"))
-                .executes((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
+    public DisplayActionCommand(BoilerPlugin plugin) {
+        this.plugin = plugin;
+    }
 
-                    String input = (String) args.get(1);
+    public LiteralArgumentBuilder<CommandSourceStack> build() {
+        return Commands.literal("action")
+                .requires(source -> source.getSender().hasPermission("boiler.command.action"))
+                .then(BoilerArguments.displayArgument(plugin)
+                        .then(click())
+                        .then(input())
+                        .then(key())
+                        .executes(context -> {
+                            Util.sendMsg(context.getSource().getSender(), "Please specify an action");
+                            return SINGLE_SUCCESS;
+                        }));
+    }
 
-                    display.onInput(sender, input);
-                    Util.sendMsg(sender, "Executing input on display %s", display.id());
-                })
-        );
-        withSubcommand(new CommandAPICommand("key")
-                .withArguments(new GreedyStringArgument("key"))
-                .executes((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    String key = (String) args.get(1);
+    private LiteralArgumentBuilder<CommandSourceStack> click() {
+        return Commands.literal("click")
+                .then(Commands.argument("x", integer())
+                        .then(Commands.argument("y", integer())
+                                .executes(context -> executeClick(context, false))
+                                .then(Commands.argument("rightClick", bool())
+                                        .executes(context -> executeClick(context, getBool(context, "rightClick"))))));
+    }
 
-                    display.onKey(sender, key);
-                    Util.sendMsg(sender, "Executing key on display %s", display.id());
-                })
-        );
-        executes((sender, args) -> {
-            sender.sendMessage("please specify an action!");
-        });
+    private LiteralArgumentBuilder<CommandSourceStack> input() {
+        return Commands.literal("input")
+                .then(Commands.argument("string", greedyString()).executes(context -> {
+                    IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+                    if (display == null) return SINGLE_SUCCESS;
+                    display.onInput(context.getSource().getSender(), getString(context, "string"));
+                    Util.sendMsg(context.getSource().getSender(), "Executing input on display %s", display.id());
+                    return SINGLE_SUCCESS;
+                }));
+    }
+
+    private LiteralArgumentBuilder<CommandSourceStack> key() {
+        return Commands.literal("key")
+                .then(Commands.argument("key", greedyString()).executes(context -> {
+                    IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+                    if (display == null) return SINGLE_SUCCESS;
+                    display.onKey(context.getSource().getSender(), getString(context, "key"));
+                    Util.sendMsg(context.getSource().getSender(), "Executing key on display %s", display.id());
+                    return SINGLE_SUCCESS;
+                }));
+    }
+
+    private int executeClick(
+            com.mojang.brigadier.context.CommandContext<CommandSourceStack> context, boolean rightClick
+    ) {
+        IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+        if (display == null) return SINGLE_SUCCESS;
+        display.onClick(context.getSource().getSender(), getInteger(context, "x"), getInteger(context, "y"), rightClick);
+        Util.sendMsg(context.getSource().getSender(), "Executing click on display %s", display.id());
+        return SINGLE_SUCCESS;
     }
 }

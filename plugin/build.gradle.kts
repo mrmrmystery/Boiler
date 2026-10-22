@@ -1,5 +1,5 @@
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "8.3.11"
     id("net.minecrell.plugin-yml.bukkit") version "0.6.0"
     id("com.modrinth.minotaur") version "2.+"
 }
@@ -25,7 +25,6 @@ dependencies {
     runtimeOnly(project(":platform-paper-1.21.2"))
      */
 
-    implementation("dev.jorel:commandapi-bukkit-shade:10.1.2")
     implementation("de.maxhenkel.voicechat:voicechat-api:2.4.11")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("uk.co.caprica:vlcj:4.8.2")
@@ -53,8 +52,8 @@ tasks {
     shadowJar {
         destinationDirectory.set(rootProject.buildDir.resolve("libs"))
         archiveBaseName.set(rootProject.name)
+        isZip64 = true
 
-        relocate("dev.jorel.commandapi", "net.somewhatcity.boiler.commandapi")
         relocate("okhttp3", "net.somewhatcity.boiler.okhttp")
         relocate("kotlin", "net.somewhatcity.boiler.kotlin")
         dependencies {
@@ -70,7 +69,7 @@ tasks {
 
 bukkit {
     main = "$group.boiler.core.BoilerPlugin"
-    apiVersion = "1.20"
+    apiVersion = "1.21"
     authors = listOf("mrmrmystery")
     name = rootProject.name
     depend = listOf("MapEngine", "MapMediaExt")
@@ -85,7 +84,7 @@ modrinth {
     versionNumber.set(rootProject.version.toString())
     versionType.set("release")
     uploadFile.set(tasks.shadowJar)
-    gameVersions.addAll(listOf("1.20", "1.20.1", "1.20.2", "1.20.3", "1.20.4", "1.20.6", "1.21"))
+    gameVersions.addAll(listOf("1.21.6"))
     loaders.addAll(listOf("paper", "purpur"))
     dependencies {
         required.project("fCDPz9mZ")

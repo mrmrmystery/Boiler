@@ -11,7 +11,6 @@
 package net.somewhatcity.boiler.core.sources.hidden;
 
 import com.google.gson.JsonObject;
-import dev.jorel.commandapi.CommandAPICommand;
 import net.somewhatcity.boiler.api.IBoilerSource;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.GraphicUtils;

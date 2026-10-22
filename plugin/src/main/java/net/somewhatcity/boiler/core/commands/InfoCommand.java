@@ -1,38 +1,39 @@
-/*
- * Copyright (c) 2025.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+/* Copyright (c) 2025. */
 
 package net.somewhatcity.boiler.core.commands;
 
-import dev.jorel.commandapi.CommandAPICommand;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
+import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class InfoCommand extends CommandAPICommand {
-    public InfoCommand() {
-        super("info");
-        executesPlayer((player, args) -> {
-            List<IBoilerDisplay> displays = new ArrayList<>();
-            BoilerPlugin.getPlugin().displayManager().displays().forEach(display -> {
-                if(display.viewers().contains(player)) {
-                    displays.add(display);
-                }
-            });
+import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
-            String displayList = Arrays.toString(displays.stream().map(IBoilerDisplay::id).toArray());
+public final class InfoCommand {
 
-            Util.sendMsg(player, "You are receiver of %s displays:\n%s".formatted(displays.size(), displayList));
-        });
+    private final BoilerPlugin plugin;
+
+    public InfoCommand(BoilerPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    public LiteralArgumentBuilder<CommandSourceStack> build() {
+        return Commands.literal("info")
+                .requires(source -> source.getExecutor() instanceof Player)
+                .executes(context -> {
+                    Player player = (Player) context.getSource().getExecutor();
+                    List<IBoilerDisplay> displays = plugin.displayManager().displays().stream()
+                            .filter(display -> display.viewers().contains(player))
+                            .toList();
+                    String displayList = Arrays.toString(displays.stream().map(IBoilerDisplay::id).toArray());
+                    Util.sendMsg(player, "You are receiver of %s displays:\n%s", displays.size(), displayList);
+                    return SINGLE_SUCCESS;
+                });
     }
 }

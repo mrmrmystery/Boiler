@@ -1,38 +1,65 @@
-/*
- * Copyright (c) 2023.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+/* Copyright (c) 2024. */
 
 package net.somewhatcity.boiler.core.commands;
 
-import de.pianoman911.mapengine.api.util.MapTraceResult;
-import dev.jorel.commandapi.arguments.*;
-import net.somewhatcity.boiler.api.IBoilerSource;
-import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import com.google.gson.JsonObject;
+import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.core.BoilerPlugin;
-import org.bukkit.entity.Player;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-import static net.somewhatcity.boiler.core.BoilerPlugin.MAP_ENGINE;
+import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
+import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
+import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
+import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.StringArgumentType.getString;
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
+import static com.mojang.brigadier.arguments.StringArgumentType.string;
 
-public class BoilerArguments {
-    public static Argument<IBoilerDisplay> displayArgument(String nodeName) {
-        return new CustomArgument<IBoilerDisplay, Integer>(new IntegerArgument(nodeName), info -> {
-            IBoilerDisplay display = BoilerPlugin.getPlugin().displayManager().display(Integer.parseInt(info.input()));
-            if (display == null) {
-                throw CustomArgument.CustomArgumentException.fromMessageBuilder(new CustomArgument.MessageBuilder("Unknown display: ").appendArgInput());
-            } else {
-                return display;
+public final class BoilerArguments {
+
+    private BoilerArguments() {
+    }
+
+    public static RequiredArgumentBuilder<CommandSourceStack, Integer> displayArgument(BoilerPlugin plugin) {
+        return Commands.argument("display", integer())
+                .suggests((context, builder) -> suggestDisplays(plugin, builder));
+    }
+
+    private static CompletableFuture<Suggestions> suggestDisplays(BoilerPlugin plugin, SuggestionsBuilder builder) {
+        plugin.displayManager().displays().forEach(display -> builder.suggest(display.id()));
+        return builder.buildFuture();
+    }
+
+    public static ArgumentBuilder<CommandSourceStack, ?> sourceArgument(CreateArgument argument) {
+        return switch (argument.type()) {
+            case STRING -> Commands.argument(argument.name(), string());
+            case GREEDY_STRING -> Commands.argument(argument.name(), greedyString());
+            case INTEGER -> Commands.argument(argument.name(), integer());
+            case BOOLEAN -> Commands.argument(argument.name(), bool());
+            case DOUBLE -> Commands.argument(argument.name(), doubleArg());
+        };
+    }
+
+    public static JsonObject sourceData(CommandContext<CommandSourceStack> context, CreateArgument[] arguments) {
+        JsonObject data = new JsonObject();
+        for (CreateArgument argument : arguments) {
+            switch (argument.type()) {
+                case STRING, GREEDY_STRING -> data.addProperty(argument.name(), getString(context, argument.name()));
+                case INTEGER -> data.addProperty(argument.name(), getInteger(context, argument.name()));
+                case BOOLEAN -> data.addProperty(argument.name(), getBool(context, argument.name()));
+                case DOUBLE -> data.addProperty(argument.name(), getDouble(context, argument.name()));
             }
-        }).replaceSuggestions(ArgumentSuggestions.strings(info -> {
-            return BoilerPlugin.getPlugin().displayManager().displays().stream().map(IBoilerDisplay::id).map(String::valueOf).toArray(String[]::new);
-        }));
+        }
+        return data;
     }
 }

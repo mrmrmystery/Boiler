@@ -2,165 +2,939 @@
 	"layout": "ISO-DE",
 	"keys": [
 		{
-			"bounds": [1, 1, 20, 20],
+			"bounds": [
+				1,
+				2,
+				24,
+				23
+			],
 			"text": "esc",
 			"action": 27,
-			"backgroundColor": "#FF6A00",
+			"backgroundColor": "#747474",
 			"color": "#ffffff"
 		},
 		{
-			"bounds": [1, 23, 20, 20],
+			"bounds": [
+				26,
+				2,
+				24,
+				23
+			],
 			"text": "^",
 			"action": 220,
 			"backgroundColor": "#D9D9D9",
 			"color": "#000000",
 			"modifiers": [
-				{ "value": "shift", "text": "°" }
+				{
+					"value": "shift",
+					"text": "°"
+				}
 			]
 		},
 		{
-			"bounds": [1, 44, 31, 20],
+			"bounds": [
+				51,
+				2,
+				24,
+				23
+			],
+			"text": "1",
+			"action": 49,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "!"
+				}
+			]
+		},
+		{
+			"bounds": [
+				76,
+				2,
+				24,
+				23
+			],
+			"text": "2",
+			"action": 50,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "\""
+				},
+				{
+					"value": "altgr",
+					"text": "²"
+				}
+			]
+		},
+		{
+			"bounds": [
+				101,
+				2,
+				24,
+				23
+			],
+			"text": "3",
+			"action": 51,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "§"
+				},
+				{
+					"value": "altgr",
+					"text": "³"
+				}
+			]
+		},
+		{
+			"bounds": [
+				126,
+				2,
+				24,
+				23
+			],
+			"text": "4",
+			"action": 52,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "$"
+				}
+			]
+		},
+		{
+			"bounds": [
+				151,
+				2,
+				24,
+				23
+			],
+			"text": "5",
+			"action": 53,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "%"
+				}
+			]
+		},
+		{
+			"bounds": [
+				176,
+				2,
+				24,
+				23
+			],
+			"text": "6",
+			"action": 54,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "&"
+				}
+			]
+		},
+		{
+			"bounds": [
+				201,
+				2,
+				24,
+				23
+			],
+			"text": "7",
+			"action": 55,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "/"
+				},
+				{
+					"value": "altgr",
+					"text": "{"
+				}
+			]
+		},
+		{
+			"bounds": [
+				226,
+				2,
+				24,
+				23
+			],
+			"text": "8",
+			"action": 56,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "("
+				},
+				{
+					"value": "altgr",
+					"text": "["
+				}
+			]
+		},
+		{
+			"bounds": [
+				251,
+				2,
+				24,
+				23
+			],
+			"text": "9",
+			"action": 57,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": ")"
+				},
+				{
+					"value": "altgr",
+					"text": "]"
+				}
+			]
+		},
+		{
+			"bounds": [
+				276,
+				2,
+				24,
+				23
+			],
+			"text": "0",
+			"action": 48,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "="
+				},
+				{
+					"value": "altgr",
+					"text": "}"
+				}
+			]
+		},
+		{
+			"bounds": [
+				301,
+				2,
+				24,
+				23
+			],
+			"text": "ß",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "?"
+				},
+				{
+					"value": "altgr",
+					"text": "\\"
+				}
+			]
+		},
+		{
+			"bounds": [
+				326,
+				2,
+				24,
+				23
+			],
+			"text": "´",
+			"action": 129,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "`"
+				}
+			]
+		},
+		{
+			"bounds": [
+				351,
+				2,
+				32,
+				23
+			],
+			"text": "back",
+			"action": 8,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
+		},
+		{
+			"bounds": [
+				1,
+				27,
+				36,
+				23
+			],
 			"text": "tab",
-			"action": 16,
+			"action": 9,
 			"backgroundColor": "#747474",
 			"color": "#ffffff"
 		},
 		{
-			"bounds": [1, 65, 37, 20],
+			"bounds": [
+				38,
+				27,
+				24,
+				23
+			],
+			"text": "q",
+			"action": 81,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "altgr",
+					"text": "@"
+				}
+			]
+		},
+		{
+			"bounds": [
+				63,
+				27,
+				24,
+				23
+			],
+			"text": "w",
+			"action": 87,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				88,
+				27,
+				24,
+				23
+			],
+			"text": "e",
+			"action": 69,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "altgr",
+					"text": "€"
+				}
+			]
+		},
+		{
+			"bounds": [
+				113,
+				27,
+				24,
+				23
+			],
+			"text": "r",
+			"action": 82,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				138,
+				27,
+				24,
+				23
+			],
+			"text": "t",
+			"action": 84,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				163,
+				27,
+				24,
+				23
+			],
+			"text": "z",
+			"action": 90,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				188,
+				27,
+				24,
+				23
+			],
+			"text": "u",
+			"action": 85,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				213,
+				27,
+				24,
+				23
+			],
+			"text": "i",
+			"action": 73,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				238,
+				27,
+				24,
+				23
+			],
+			"text": "o",
+			"action": 79,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				263,
+				27,
+				24,
+				23
+			],
+			"text": "p",
+			"action": 80,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				288,
+				27,
+				24,
+				23
+			],
+			"text": "ü",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				313,
+				27,
+				24,
+				23
+			],
+			"text": "+",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "*"
+				},
+				{
+					"value": "altgr",
+					"text": "~"
+				}
+			]
+		},
+		{
+			"bounds": [
+				338,
+				27,
+				45,
+				23
+			],
+			"text": "enter",
+			"action": 10,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
+		},
+		{
+			"bounds": [
+				1,
+				52,
+				43,
+				23
+			],
 			"text": "caps",
-			"action": "20",
+			"action": 20,
 			"backgroundColor": "#747474",
 			"color": "#ffffff"
 		},
 		{
-			"bounds": [1, 86, 26, 20],
+			"bounds": [
+				45,
+				52,
+				24,
+				23
+			],
+			"text": "a",
+			"action": 65,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				70,
+				52,
+				24,
+				23
+			],
+			"text": "s",
+			"action": 83,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				95,
+				52,
+				24,
+				23
+			],
+			"text": "d",
+			"action": 68,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				120,
+				52,
+				24,
+				23
+			],
+			"text": "f",
+			"action": 70,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				145,
+				52,
+				24,
+				23
+			],
+			"text": "g",
+			"action": 71,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				170,
+				52,
+				24,
+				23
+			],
+			"text": "h",
+			"action": 72,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				195,
+				52,
+				24,
+				23
+			],
+			"text": "j",
+			"action": 74,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				220,
+				52,
+				24,
+				23
+			],
+			"text": "k",
+			"action": 75,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				245,
+				52,
+				24,
+				23
+			],
+			"text": "l",
+			"action": 76,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				270,
+				52,
+				24,
+				23
+			],
+			"text": "ö",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				295,
+				52,
+				24,
+				23
+			],
+			"text": "ä",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				320,
+				52,
+				24,
+				23
+			],
+			"text": "#",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "'"
+				}
+			]
+		},
+		{
+			"bounds": [
+				345,
+				52,
+				38,
+				23
+			],
+			"text": "enter",
+			"action": 10,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
+		},
+		{
+			"bounds": [
+				1,
+				77,
+				49,
+				23
+			],
 			"text": "shift",
 			"action": 16,
 			"backgroundColor": "#747474",
 			"color": "#ffffff"
 		},
 		{
-			"bounds": [1, 107, 26, 20],
+			"bounds": [
+				51,
+				77,
+				24,
+				23
+			],
+			"text": "<",
+			"action": 521,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": ">"
+				},
+				{
+					"value": "altgr",
+					"text": "|"
+				}
+			]
+		},
+		{
+			"bounds": [
+				76,
+				77,
+				24,
+				23
+			],
+			"text": "y",
+			"action": 89,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				101,
+				77,
+				24,
+				23
+			],
+			"text": "x",
+			"action": 88,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				126,
+				77,
+				24,
+				23
+			],
+			"text": "c",
+			"action": 67,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				151,
+				77,
+				24,
+				23
+			],
+			"text": "v",
+			"action": 86,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				176,
+				77,
+				24,
+				23
+			],
+			"text": "b",
+			"action": 66,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				201,
+				77,
+				24,
+				23
+			],
+			"text": "n",
+			"action": 78,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000"
+		},
+		{
+			"bounds": [
+				226,
+				77,
+				24,
+				23
+			],
+			"text": "m",
+			"action": 77,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "altgr",
+					"text": "µ"
+				}
+			]
+		},
+		{
+			"bounds": [
+				251,
+				77,
+				24,
+				23
+			],
+			"text": ",",
+			"action": 44,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": ";"
+				}
+			]
+		},
+		{
+			"bounds": [
+				276,
+				77,
+				24,
+				23
+			],
+			"text": ".",
+			"action": 46,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": ":"
+				}
+			]
+		},
+		{
+			"bounds": [
+				301,
+				77,
+				24,
+				23
+			],
+			"text": "-",
+			"action": 45,
+			"backgroundColor": "#D9D9D9",
+			"color": "#000000",
+			"modifiers": [
+				{
+					"value": "shift",
+					"text": "_"
+				}
+			]
+		},
+		{
+			"bounds": [
+				326,
+				77,
+				57,
+				23
+			],
+			"text": "shift",
+			"action": 16,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
+		},
+		{
+			"bounds": [
+				1,
+				102,
+				38,
+				23
+			],
 			"text": "ctrl",
 			"action": 17,
 			"backgroundColor": "#747474",
 			"color": "#ffffff"
 		},
 		{
-			"bounds": [22, 23, 20, 20],
-			"text": "1",
-			"action": 49,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "!" }
-			]
+			"bounds": [
+				40,
+				102,
+				32,
+				23
+			],
+			"text": "alt",
+			"action": 18,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
 		},
 		{
-			"bounds": [43, 23, 20, 20],
-			"text": "2",
-			"action": 50,
+			"bounds": [
+				73,
+				102,
+				201,
+				23
+			],
+			"text": "space",
+			"action": 32,
 			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "\"" }
-			]
+			"color": "#000000"
 		},
 		{
-			"bounds": [64, 23, 20, 20],
-			"text": "3",
-			"action": 51,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "§" }
-			]
+			"bounds": [
+				275,
+				102,
+				38,
+				23
+			],
+			"text": "alt gr",
+			"action": 65406,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
 		},
 		{
-			"bounds": [85, 23, 20, 20],
-			"text": "4",
-			"action": 52,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "$" }
-			]
+			"bounds": [
+				314,
+				102,
+				16,
+				23
+			],
+			"text": "←",
+			"action": 37,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
 		},
 		{
-			"bounds": [85, 23, 20, 20],
-			"text": "5",
-			"action": 53,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "%" }
-			]
+			"bounds": [
+				331,
+				102,
+				16,
+				23
+			],
+			"text": "↓",
+			"action": 40,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
 		},
 		{
-			"bounds": [85, 23, 20, 20],
-			"text": "6",
-			"action": 54,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "&" }
-			]
+			"bounds": [
+				348,
+				102,
+				16,
+				23
+			],
+			"text": "↑",
+			"action": 38,
+			"backgroundColor": "#747474",
+			"color": "#ffffff"
 		},
 		{
-			"bounds": [85, 23, 20, 20],
-			"text": "7",
-			"action": 53,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "/" }
-			]
-		},
-		{
-			"bounds": [85, 23, 20, 20],
-			"text": "8",
-			"action": 53,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "(" }
-			]
-		},
-		{
-			"bounds": [85, 23, 20, 20],
-			"text": "9",
-			"action": 53,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": ")" }
-			]
-		},
-		{
-			"bounds": [85, 23, 20, 20],
-			"text": "0",
-			"action": 48,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "=" }
-			]
-		},
-		{
-			"bounds": [85, 23, 20, 20],
-			"text": "´",
-			"action": 221,
-			"backgroundColor": "#D9D9D9",
-			"color": "#ffffff",
-			"modifiers": [
-				{ "value": "shift", "text": "`" }
-			]
-		},
-		{
-			"bounds": [85, 23, 20, 20],
-			"text": "back",
-			"action": 8,
-			"backgroundColor": "#D9D9D9",
+			"bounds": [
+				365,
+				102,
+				18,
+				23
+			],
+			"text": "→",
+			"action": 39,
+			"backgroundColor": "#747474",
 			"color": "#ffffff"
 		}
 	]

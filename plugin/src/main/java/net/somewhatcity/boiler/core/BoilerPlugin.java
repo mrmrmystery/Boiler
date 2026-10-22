@@ -11,8 +11,7 @@
 package net.somewhatcity.boiler.core;
 
 import de.pianoman911.mapengine.api.MapEngineApi;
-import dev.jorel.commandapi.CommandAPI;
-import dev.jorel.commandapi.CommandAPIBukkitConfig;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.somewhatcity.boiler.api.BoilerApi;
 import net.somewhatcity.boiler.api.IDisplayManager;
 import net.somewhatcity.boiler.api.ISourceManager;
@@ -68,7 +67,6 @@ public class BoilerPlugin extends JavaPlugin {
     @Override
     public void onLoad() {
         plugin = this;
-        CommandAPI.onLoad(new CommandAPIBukkitConfig(this));
     }
 
     @Override
@@ -111,8 +109,6 @@ public class BoilerPlugin extends JavaPlugin {
 
         //this.platform = PlatformUtil.getPlatform(this, this.getClassLoader(), new ImplListenerBridge());
 
-        CommandAPI.onEnable();
-
         intervalManager = new UpdateIntervalManager(this);
 
         if(Util.isPluginInstalled("voicechat")) SvcLoader.loadSimpleVoiceChat();
@@ -150,10 +146,9 @@ public class BoilerPlugin extends JavaPlugin {
         pm.registerEvents(new BoilerListener(), this);
         pm.registerEvents(new PlayerJoinListener(), this);
 
-        Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
-            System.out.println("registering boiler commands...");
-            new BoilerCommand();
-        }, 10);
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands ->
+                commands.registrar().register(BoilerCommand.create(this))
+        );
 
         Bukkit.getServer().getMessenger().registerOutgoingPluginChannel(this, "boiler:handshake_request");
         Bukkit.getServer().getMessenger().registerOutgoingPluginChannel(this, "mymod:test");
@@ -172,9 +167,8 @@ public class BoilerPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        mediaMtx.stop();
-        mediaMtxAuthServer.stop();
-        CommandAPI.onDisable();
+        if (mediaMtx != null) mediaMtx.stop();
+        if (mediaMtxAuthServer != null) mediaMtxAuthServer.stop();
     }
     public IDisplayManager displayManager() {
         return displayManager;

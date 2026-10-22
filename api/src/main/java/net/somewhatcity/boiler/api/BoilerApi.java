@@ -10,10 +10,15 @@
 
 package net.somewhatcity.boiler.api;
 
+import net.somewhatcity.boiler.api.audio.IBoilerAudioPlayer;
+import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+
 public interface BoilerApi {
 
     IDisplayManager displayManager();
 
     ISourceManager sourceManager();
+
+    IBoilerAudioPlayer createAudioPlayer(IBoilerDisplay display);
 
 }

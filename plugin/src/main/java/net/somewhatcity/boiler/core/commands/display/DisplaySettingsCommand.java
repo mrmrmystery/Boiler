@@ -1,161 +1,123 @@
-/*
- * Copyright (c) 2023.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+/* Copyright (c) 2023. */
 
 package net.somewhatcity.boiler.core.commands.display;
 
 import com.google.gson.JsonObject;
-import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.*;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.core.BoilerPlugin;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.commands.BoilerArguments;
+import net.somewhatcity.boiler.core.commands.CommandContextUtil;
 
-public class DisplaySettingsCommand extends CommandAPICommand {
-    public DisplaySettingsCommand() {
-        super("settings");
-        withPermission("boiler.command.settings");
-        withArguments(BoilerArguments.displayArgument("display"));
-        withSubcommand(new CommandAPICommand("dither")
-                .withArguments(new BooleanArgument("enabled"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    boolean value = (boolean) args.get(1);
-                    display.settings().addProperty("dither", value);
+import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
+import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
+import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
+import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
+import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+
+public final class DisplaySettingsCommand {
+
+    private static final String[] DIRECTIONS = {"UP", "DOWN", "NORTH", "EAST", "SOUTH", "WEST"};
+
+    private final BoilerPlugin plugin;
+
+    public DisplaySettingsCommand(BoilerPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    public LiteralArgumentBuilder<CommandSourceStack> build() {
+        return Commands.literal("settings")
+                .requires(source -> source.getSender().hasPermission("boiler.command.settings"))
+                .then(BoilerArguments.displayArgument(plugin)
+                        .then(booleanSetting("dither"))
+                        .then(booleanSetting("buffer"))
+                        .then(integerSetting("renderPeriod", "milliseconds", false))
+                        .then(booleanSetting("bundle"))
+                        .then(integerSetting("viewDistance", "distance", false))
+                        .then(integerSetting("soundDistance", "distance", false))
+                        .then(booleanSetting("glowing"))
+                        .then(integerSetting("itemRotation", "rotation", true))
+                        .then(directionSetting())
+                        .then(rotationSetting())
+                        .executes(context -> {
+                            Util.sendErrMsg(context.getSource().getSender(), "Please specify an option");
+                            return SINGLE_SUCCESS;
+                        }));
+    }
+
+    private LiteralArgumentBuilder<CommandSourceStack> booleanSetting(String name) {
+        return Commands.literal(name)
+                .then(Commands.argument("enabled", bool()).executes(context -> {
+                    IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+                    if (display == null) return SINGLE_SUCCESS;
+                    boolean value = getBool(context, "enabled");
+                    display.settings().addProperty(name, value);
                     display.save();
+                    if (name.equals("glowing")) display.respawn();
+                    sendSettingMessage(context, display, name, value);
+                    return SINGLE_SUCCESS;
+                }));
+    }
 
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "dither", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("buffer")
-                .withArguments(new BooleanArgument("enabled"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    boolean value = (boolean) args.get(1);
-                    display.settings().addProperty("buffer", value);
+    private LiteralArgumentBuilder<CommandSourceStack> integerSetting(String name, String argumentName, boolean respawn) {
+        return Commands.literal(name)
+                .then(Commands.argument(argumentName, integer()).executes(context -> {
+                    IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+                    if (display == null) return SINGLE_SUCCESS;
+                    int value = getInteger(context, argumentName);
+                    display.settings().addProperty(name, value);
                     display.save();
+                    if (respawn) display.respawn();
+                    sendSettingMessage(context, display, name, value);
+                    return SINGLE_SUCCESS;
+                }));
+    }
 
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "buffer", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("renderPeriod")
-                .withArguments(new IntegerArgument("milliseconds"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    int value = (int) args.get(1);
-                    display.settings().addProperty("renderPeriod", value);
-                    display.save();
+    private LiteralArgumentBuilder<CommandSourceStack> directionSetting() {
+        LiteralArgumentBuilder<CommandSourceStack> direction = Commands.literal("visualDirection");
+        for (String value : DIRECTIONS) {
+            direction.then(Commands.literal(value).executes(context -> {
+                IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+                if (display == null) return SINGLE_SUCCESS;
+                display.settings().addProperty("visualDirection", value);
+                display.save();
+                display.respawn();
+                sendSettingMessage(context, display, "visualDirection", value);
+                return SINGLE_SUCCESS;
+            }));
+        }
+        return direction;
+    }
 
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "renderPeriod", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("bundle")
-                .withArguments(new BooleanArgument("enabled"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    boolean value = (boolean) args.get(1);
-                    display.settings().addProperty("bundle", value);
-                    display.save();
+    private LiteralArgumentBuilder<CommandSourceStack> rotationSetting() {
+        return Commands.literal("rotation")
+                .then(Commands.argument("yaw", floatArg())
+                        .then(Commands.argument("pitch", floatArg()).executes(context -> {
+                            IBoilerDisplay display = CommandContextUtil.display(context, plugin);
+                            if (display == null) return SINGLE_SUCCESS;
+                            float yaw = getFloat(context, "yaw");
+                            float pitch = getFloat(context, "pitch");
+                            JsonObject rotation = new JsonObject();
+                            rotation.addProperty("yaw", yaw);
+                            rotation.addProperty("pitch", pitch);
+                            display.settings().add("rotation", rotation);
+                            display.save();
+                            display.respawn();
+                            Util.sendMsg(context.getSource().getSender(), "Set %s to %s,%s for display %s",
+                                    "rotation", yaw, pitch, display.id());
+                            return SINGLE_SUCCESS;
+                        })));
+    }
 
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "bundle", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("viewDistance")
-                .withArguments(new IntegerArgument("distance"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    int value = (int) args.get(1);
-                    display.settings().addProperty("viewDistance", value);
-                    display.save();
-
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "viewDistance", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("soundDistance")
-                .withArguments(new IntegerArgument("distance"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    int value = (int) args.get(1);
-                    display.settings().addProperty("soundDistance", value);
-                    display.save();
-
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "soundDistance", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("glowing")
-                .withArguments(new BooleanArgument("enabled"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    int value = (int) args.get(1);
-                    display.settings().addProperty("glowing", value);
-                    display.save();
-
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "glowing", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("glowing")
-                .withArguments(new BooleanArgument("enabled"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    boolean value = (boolean) args.get(1);
-                    display.settings().addProperty("glowing", value);
-                    display.save();
-                    display.respawn();
-
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "glowing", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("itemRotation")
-                .withArguments(new IntegerArgument("rotation"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    int value = (int) args.get(1);
-                    display.settings().addProperty("itemRotation", value);
-                    display.save();
-                    display.respawn();
-
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "itemRotation", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("visualDirection")
-                .withArguments(new MultiLiteralArgument("direction", "UP", "DOWN", "NORTH", "EAST", "SOUTH", "WEST"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-                    String value = (String) args.get(1);
-                    display.settings().addProperty("visualDirection", value);
-                    display.save();
-                    display.respawn();
-
-                    Util.sendMsg(sender, "Set %s to %s for display %s", "visualDirection", value, display.id());
-                }))
-        );
-        withSubcommand(new CommandAPICommand("rotation")
-                .withArguments(new FloatArgument("yaw"))
-                .withArguments(new FloatArgument("pitch"))
-                .executes(((sender, args) -> {
-                    IBoilerDisplay display = (IBoilerDisplay) args.get(0);
-
-                    float yaw = (float) args.get(1);
-                    float pitch = (float) args.get(2);
-
-                    JsonObject rotation = new JsonObject();
-                    rotation.addProperty("yaw", yaw);
-                    rotation.addProperty("pitch", pitch);
-
-                    display.settings().add("rotation", rotation);
-                    display.save();
-                    display.respawn();
-                    Util.sendMsg(sender, "Set %s to %s,%s for display %s", "rotation", yaw, pitch, display.id());
-                }))
-        );
-        executes(((sender, args) -> {
-            Util.sendErrMsg(sender, "Please specify an option");
-        }));
+    private static void sendSettingMessage(
+            CommandContext<CommandSourceStack> context, IBoilerDisplay display, String name, Object value
+    ) {
+        Util.sendMsg(context.getSource().getSender(), "Set %s to %s for display %s", name, value, display.id());
     }
 }

@@ -11,8 +11,6 @@
 package net.somewhatcity.boiler.core.sources;
 
 import com.google.gson.JsonObject;
-import dev.jorel.commandapi.arguments.Argument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
 import net.somewhatcity.boiler.api.CreateArgument;
 import net.somewhatcity.boiler.api.CreateCommandArguments;
 import net.somewhatcity.boiler.api.IBoilerSource;
@@ -23,7 +21,6 @@ import org.bukkit.Bukkit;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.List;
 
 @CreateCommandArguments(arguments = {
         @CreateArgument(name = "id", type = CommandArgumentType.INTEGER),
@@ -68,11 +65,4 @@ public class SectionCloneSource implements IBoilerSource {
 
     }
 
-    public static List<Argument<?>> creationArguments() {
-        return List.of(
-                new IntegerArgument("id"),
-                new IntegerArgument("x"),
-                new IntegerArgument("y")
-        );
-    }
 }

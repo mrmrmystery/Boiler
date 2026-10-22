@@ -11,11 +11,12 @@
 package net.somewhatcity.boiler.core.audio;
 
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
+import net.somewhatcity.boiler.api.audio.IBoilerAudioPlayer;
 import net.somewhatcity.boiler.core.Util;
 import net.somewhatcity.boiler.core.audio.plasmovoice.PlasmoAudioPlayer;
 import net.somewhatcity.boiler.core.audio.simplevoicechat.SvcAudioPlayer;
 
-public class BAudioPlayer {
+public class BAudioPlayer implements IBoilerAudioPlayer {
 
     private SvcAudioPlayer simpleVCAudioPlayer;
     private PlasmoAudioPlayer plasmoAudioPlayer;
@@ -32,6 +33,7 @@ public class BAudioPlayer {
 
     }
 
+    @Override
     public void play(byte[] samples) {
         if(simpleVCAudioPlayer != null) {
             simpleVCAudioPlayer.queue(samples);
@@ -42,6 +44,7 @@ public class BAudioPlayer {
         }
     }
 
+    @Override
     public void stop() {
         if(simpleVCAudioPlayer != null) {
             simpleVCAudioPlayer.stop();
@@ -52,6 +55,7 @@ public class BAudioPlayer {
         }
     }
 
+    @Override
     public int getAudioQueueSize() {
         if(simpleVCAudioPlayer != null) {
             return simpleVCAudioPlayer.getAudioQueueSize();

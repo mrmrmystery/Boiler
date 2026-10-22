@@ -14,8 +14,6 @@ import com.google.gson.JsonObject;
 import de.pianoman911.mapengine.api.clientside.IDisplay;
 import de.pianoman911.mapengine.api.clientside.IMapDisplay;
 import de.pianoman911.mapengine.api.drawing.IDrawingSpace;
-import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.Argument;
 import net.somewhatcity.boiler.api.display.IBoilerDisplay;
 import net.somewhatcity.boiler.api.util.CommandArgumentType;
 import net.somewhatcity.boiler.api.util.GraphicUtils;
